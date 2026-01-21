@@ -1,4 +1,5 @@
 $currentRows = @()
+
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
     if ($md -isnot [string]) {
         # If the markdown was a file
@@ -105,7 +106,10 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
     }
 
     if ($md -match '(?>\.md|markdown)$' -and
-        (Test-Path $md -ErrorAction Ignore)
+        (
+            [IO.File]::Exists("$md") -or 
+            (Test-Path $md -ErrorAction Ignore)
+        )        
     ) {
         $md = Get-Content -Raw $md
     }
@@ -131,7 +135,7 @@ $allMarkdown = @(foreach ($md in $allMarkdown) {
     if ($md -match '^---') {
         $null, $yamlheader, $restOfMakdown = $md -split '---', 3
         if ($yamlheader) {
-            $yamlHeaders+= $yamlheader            
+            $yamlHeaders+= $yamlheader
         }
         $restOfMakdown
     } else {
@@ -155,11 +159,12 @@ $Markdown = $this.'#Markdown'
 
 if (-not $Markdown) { return }
 
+$mdPipelineBuilder = [Markdig.MarkdownPipelineBuilder]::new()
+$mdPipeline = [Markdig.MarkdownExtensions]::UsePipeTables($mdPipelineBuilder).Build()
+
 $this | 
     Add-Member NoteProperty '#HTML' (
-        $Markdown | 
-            ConvertFrom-Markdown | 
-            Select-Object -ExpandProperty Html
+        [Markdig.Markdown]::ToHtml($markdown, $mdPipeline)
     ) -Force
 
 $this | 

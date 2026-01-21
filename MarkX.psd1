@@ -12,7 +12,7 @@
 RootModule = 'MarkX.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.1'
+ModuleVersion = '0.1.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -63,18 +63,12 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = @'
-## MarkX 0.1.1:
+## MarkX 0.1.2:
 
-* MarkX Help (#26)
-* MarkX now accepts commands / help (#27)
-* MarkX.Headings gets heading elements (#29)
-* MarkX.Lexicon gets lexicons in Markdown (#25)
-* MarkX.YamlHeader support (#32, #33)
-* Allowing piped markdown file input (#34)
-* MarkX.Code gets code within markdown (#30)
-* MarkX.CodeBlock gets code blocks within markdown (#31)
-* MarkX.ToString can now stringify any property (#35)
-* MarkX formatting (#36)
+Minor performance improvements:
+
+* Directly using Markdig (#38)
+* Preferring `[IO.File]::Exists` (#42)
 
 ---
 
