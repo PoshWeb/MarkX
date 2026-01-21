@@ -1,4 +1,5 @@
 $currentRows = @()
+
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
     if ($md -isnot [string]) {
         # If the markdown was a file
@@ -155,11 +156,12 @@ $Markdown = $this.'#Markdown'
 
 if (-not $Markdown) { return }
 
+$mdPipelineBuilder = [Markdig.MarkdownPipelineBuilder]::new()
+$mdPipeline = [Markdig.MarkdownExtensions]::UsePipeTables($mdPipelineBuilder).Build()
+
 $this | 
     Add-Member NoteProperty '#HTML' (
-        $Markdown | 
-            ConvertFrom-Markdown | 
-            Select-Object -ExpandProperty Html
+        [Markdig.Markdown]::ToHtml($markdown, $mdPipeline)
     ) -Force
 
 $this | 
