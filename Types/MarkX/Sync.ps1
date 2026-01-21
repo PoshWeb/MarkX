@@ -106,7 +106,10 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
     }
 
     if ($md -match '(?>\.md|markdown)$' -and
-        (Test-Path $md -ErrorAction Ignore)
+        (
+            [IO.File]::Exists("$md") -or 
+            (Test-Path $md -ErrorAction Ignore)
+        )        
     ) {
         $md = Get-Content -Raw $md
     }
@@ -132,7 +135,7 @@ $allMarkdown = @(foreach ($md in $allMarkdown) {
     if ($md -match '^---') {
         $null, $yamlheader, $restOfMakdown = $md -split '---', 3
         if ($yamlheader) {
-            $yamlHeaders+= $yamlheader            
+            $yamlHeaders+= $yamlheader
         }
         $restOfMakdown
     } else {
