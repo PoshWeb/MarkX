@@ -1,3 +1,12 @@
+## MarkX 0.1.2:
+
+Minor performance improvements:
+
+* Directly using Markdig (#38)
+* Preferring `[IO.File]::Exists` (#42)
+
+---
+
 ## MarkX 0.1.1:
 
 * MarkX Help (#26)
