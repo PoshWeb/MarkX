@@ -659,6 +659,40 @@ $markdownData = $this.DataSet
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>LiquidPattern</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Get the Liquid Pattern
+.DESCRIPTION
+    Gets the regular expression pattern used to match Liquid tags.
+#&gt;
+param()
+$liquidPattern = @(
+    '(?&gt;'
+        '\{\%\s{0,}'
+        '(?&lt;tag&gt;[^\%]+)'
+        '\s{0,}\%}'
+        
+        '|'
+
+        '(?&lt;noescape&gt;\{{3})'
+        '(?&lt;expression&gt;[^\}]+)'
+        '\}{3}'
+
+        '|'
+
+        '\{{2}'
+        '(?&lt;expression&gt;[^\}]+)'
+        '\}{2}'
+    ')'    
+) -join ''
+
+return [Regex]::new($liquidPattern)
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Markdown</Name>
         <GetScriptBlock>
                         return $this.'#Markdown'
