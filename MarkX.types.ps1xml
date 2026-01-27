@@ -659,6 +659,21 @@ $markdownData = $this.DataSet
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>Liquid</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Get Liquid
+.DESCRIPTION
+    Get Liquid within the Markdown
+#&gt;
+if ($this.LiquidPattern -is [regex]) {
+    return $this.LiquidPattern.Matches("$($this.Markdown)")
+}
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>LiquidPattern</Name>
         <GetScriptBlock>
                         &lt;#
