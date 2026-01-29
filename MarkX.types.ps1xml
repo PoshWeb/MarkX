@@ -724,7 +724,15 @@ $this.Input = $Markdown
       <ScriptProperty>
         <Name>Table</Name>
         <GetScriptBlock>
-                        $this.XML | Select-Xml -XPath '//table' | Select-Object -ExpandProperty Node
+                        &lt;#
+.SYNOPSIS
+    Gets any tables
+.DESCRIPTION
+    Gets any tables present in the markdown
+#&gt;
+$this.XML | 
+    Select-Xml -XPath '//table' | 
+    Select-Object -ExpandProperty Node
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
