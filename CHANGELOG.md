@@ -1,3 +1,14 @@
+## MarkX 0.1.3:
+
+* Property Improvement:
+  * Late binding MarkX.DataSet (#44)
+* New Properties:
+  * MarkX.Liquid ( #45 )
+  * MarkX.LiquidPattern ( #46 )
+
+---
+
+
 ## MarkX 0.1.2:
 
 Minor performance improvements:

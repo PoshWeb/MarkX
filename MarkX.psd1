@@ -12,7 +12,7 @@
 RootModule = 'MarkX.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.2'
+ModuleVersion = '0.1.3'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -63,12 +63,13 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = @'
-## MarkX 0.1.2:
+## MarkX 0.1.3:
 
-Minor performance improvements:
-
-* Directly using Markdig (#38)
-* Preferring `[IO.File]::Exists` (#42)
+* Property Improvement:
+  * Late binding MarkX.DataSet (#44)
+* New Properties:
+  * MarkX.Liquid ( #45 )
+  * MarkX.LiquidPattern ( #46 )
 
 ---
 
