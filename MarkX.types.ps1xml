@@ -573,6 +573,49 @@ return $this.'#DataSet'
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>Date</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets the Markdown date
+.DESCRIPTION
+    Gets the Markdown date, according to it's YamlHeader `date` field.
+#&gt;
+param()
+
+$header = $this.Header
+if (-not $header.date) { return }
+
+if ($header.date -is [DateTime]) {
+    return $header.date
+} elseif ($header.date -as [DateTime]) {
+    return $header.date -as [DateTime]
+}
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets the Markdown date
+.DESCRIPTION
+    Sets the Markdown date in a Yaml Header
+#&gt;
+param(
+[DateTime]
+$Date = [DateTime]::Now
+)
+
+$header = $this.Header
+if (-not $header) { 
+    $this.YamlHeader = [Ordered]@{
+        date = $Date
+    }
+    return
+}
+$header.date = $Date
+$this.YamlHeader = $header
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Header</Name>
         <GetScriptBlock>
                         if (-not $this.'#YamlHeader') { return }
