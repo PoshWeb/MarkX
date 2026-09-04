@@ -144,10 +144,13 @@ if ($currentRows) {
 
 $yamlHeaders = @()
 $allMarkdown = @(foreach ($md in $allMarkdown) {
-    if ($md -match '^---') {
-        $null, $yamlheader, $restOfMakdown = $md -split '---', 3
-        if ($yamlheader) {
-            $yamlHeaders+= $yamlheader
+    if ($md -match '^[\-\+]{3}') {
+        $null, $frontMatter, $restOfMakdown = $md -split '[\-\+]{3}', 3
+        
+        $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
+
+        if ($frontMatter) {
+            $yamlHeaders+=$frontMatter
         }
         $restOfMakdown
     } else {
