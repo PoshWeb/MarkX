@@ -388,6 +388,40 @@ return $codeByLanguage
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>Content</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Content
+.DESCRIPTION
+    Gets the combined content of the markdown.
+    
+    This contains both the Markdown and the YAML Header.
+#&gt;
+@(if ($this.YamlHeader) {
+    "---"
+    $this.YamlHeader
+    "---"
+    $this.Markdown
+} else {
+    $this.Markdown
+}) -join [Environment]::NewLine
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Content
+.DESCRIPTION
+    Sets the combined content of the markdown
+#&gt;
+param($InputObject)
+
+$this | Add-Member NoteProperty '#Input' $InputObject -Force
+
+$this.Sync()
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>DataSet</Name>
         <GetScriptBlock>
                         if ($this.'#DataSet') {return $this.'#DataSet' }
