@@ -1,3 +1,12 @@
+<#
+.SYNOPSIS
+    Synchronizes Mark Data
+.DESCRIPTION
+    Synchronizes a MarkX input into a parsed MarkX file.
+.NOTES
+    This will read markdown from files, convert them from markdown,
+    and attempt to cast the output to XHTML so it can be queried.    
+#>
 $currentRows = @()
 
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
@@ -5,7 +14,7 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
         # If the markdown was a file
         if ($md -is [IO.FileInfo] -and 
             # and it had the extension .md or markdown
-            $md.Extension -in '.md', '.markdown') {
+            $md.Extension -in '.md', '.markdown', '.mdx') {
             $this | Add-Member NoteProperty '#Path' $md.Fullname -Force        
             $md = Get-Content -LiteralPath $md.Fullname -Raw 
             $md

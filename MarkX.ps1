@@ -40,7 +40,7 @@
         MarkX | 
         Select-Object -ExpandProperty Code
 #>
-[Alias('MarkX','Markdown','Get-Markdown')]    
+[Alias('Markdown','Get-Markdown')]    
 param()
 
 # Collect all input and arguments.
@@ -79,8 +79,8 @@ foreach ($in in $AllInput) {
         continue # and should continue.
     }
     
-    # If the file was not markdown
-    if ($inFile.Extension -notin '.md', '.markdown') {
+    # If the file was not markdown or mdx.
+    if ($inFile.Extension -notin '.md', '.markdown', '.mdx') {
         # we will treat the input as markdown
         $remainingInput += $in
         continue # and should continue.
