@@ -927,6 +927,20 @@ $this.Input = $Markdown
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>MarkdownExtension</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown extensions
+.DESCRIPTION
+    Gets the valid extensions for markdown files
+#&gt;
+
+@($this.MarkdownContentType.Keys)
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Path</Name>
         <GetScriptBlock>
                         &lt;#
