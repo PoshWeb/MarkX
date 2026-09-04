@@ -49,11 +49,83 @@ $allInput = @($input) + $(if ($args) {
     $args
 })
 
-# Create a property bag for the Markdown,
+# We could have been provided a list of markdown files
+# or markdown itself.
+
+# So we need to make a pass over each input
+$remainingInput = @()
+$inputFiles = @()
+foreach ($in in $AllInput) {
+    # If the input starts as slashes
+    $inFile = if ($in -match '^\.[\\/]') {
+        # get the unresolved path and attempt to cast it to a file
+        $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($in) -as [IO.FileInfo]
+    } else {
+        # otherwise, attempt to cast the input to a file
+        $in -as [IO.FileInfo]
+    }
+
+    # If the file was empty (or null)
+    if (-not $inFile.Length) {
+        # we will treat it as plain markdown
+        $remainingInput += $in
+        continue # and should continue.
+    }
+    
+    # If the file does not exist
+    if (-not [IO.File]::Exists($inFile.FullName)) {
+        # we will treat it as markdown
+        $remainingInput += $in
+        continue # and should continue.
+    }
+    
+    # If the file was not markdown
+    if ($inFile.Extension -notin '.md', '.markdown') {
+        # we will treat the input as markdown
+        $remainingInput += $in
+        continue # and should continue.
+    }
+
+    $inputFiles += $inFile    
+}
+
+# If we have a number of input files,
+# we will want to show progress
+$progress = [Ordered]@{id=[random]::new().Next()}
+$progress.Activity = "Converting Markdown"
+
+# Walk over each of our input files
+for ($inputNumber = 0; $inputNumber -lt $inputFiles.Count; $inputNumber++) {
+    # determine percent complete
+    $progress.PercentComplete = $inputNumber * 100 / $inputFiles.Length
+    $progress.Status = $inputFiles[$inputNumber].Name
+    # and write a progress message.
+    Write-Progress @progress
+
+    # Then, create a new MarkX object
+    $markx = New-Object PSObject -Property @{
+        PSTypeName = 'MarkX'        
+    }
+    # set its input to the input file
+    $markx.Input = $inputFiles[$inputNumber]
+    # and output the object
+    $markx
+}
+
+# If we had any input
+if ($inputNumber) {
+    # We need to complete our progress bars.
+    $progress.Remove('PercentComplete')
+    $progress.Completed = $true
+}
+
+# If there was no remaining input, return
+if (-not $remainingInput.Length) { return }
+# Otherwise, create a property bag for the Markdown.
 $markx = New-Object PSObject -Property @{
     PSTypeName = 'MarkX'        
 }
-# set its input to all input
-$markx.Input = $allInput    
+# set its input to all remaining input
+$markx.Input = $remainingInput
 # and then output the MarkX / Markdown
 return $markx
