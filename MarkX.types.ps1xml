@@ -911,6 +911,22 @@ $this.Input = $Markdown
                     </SetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>MarkdownContentType</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown content types
+.DESCRIPTION
+    Gets the appropriate Content Type for markdown files, given a number of extensions.
+#&gt;
+[Ordered]@{
+    '.md' = 'text/markdown'
+    '.mdx' = 'text/mdx'
+    '.markdown' = 'text/markdown'
+}
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Path</Name>
         <GetScriptBlock>
                         &lt;#
