@@ -1,4 +1,3 @@
-
 <#
 .SYNOPSIS
     Gets MarkX
@@ -44,12 +43,17 @@
 [Alias('MarkX','Markdown','Get-Markdown')]    
 param()
 
+# Collect all input and arguments.
+# This function treats all input and arguments as interchangeable.
 $allInput = @($input) + $(if ($args) {
     $args
 })
 
+# Create a property bag for the Markdown,
 $markx = New-Object PSObject -Property @{
     PSTypeName = 'MarkX'        
 }
+# set its input to all input
 $markx.Input = $allInput    
-$markx
+# and then output the MarkX / Markdown
+return $markx
