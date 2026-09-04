@@ -567,9 +567,14 @@ $this.XML |
     If the markdown cannot be coerced into XML, this should use ConvertFrom-Markdown.
 #&gt;
 if (-not $this.XML.XHTML) {
-    return $this.Markdown | 
-        ConvertFrom-Markdown | 
-        Select-Object -ExpandProperty Html
+    if ($this.'#HTML') {
+        return "$($this.'#HTML')" + [Environment]::NewLine
+    }
+    else {
+        return $this.Markdown |
+            ConvertFrom-Markdown |
+            Select-Object -ExpandProperty Html
+    }    
 }
 return ("$($this.XML.XHTML.InnerXML)" + [Environment]::NewLine)
                     </GetScriptBlock>
@@ -810,7 +815,13 @@ $this.XML |
       <ScriptProperty>
         <Name>XML</Name>
         <GetScriptBlock>
-                        return $this.'#XMl'
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown as XML
+.DESCRIPTION
+    Gets the Markdown as XHTML, if possible.
+#&gt;
+return $this.'#XML'
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
