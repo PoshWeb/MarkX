@@ -1,3 +1,27 @@
+<#
+.SYNOPSIS
+    README.md.ps1
+.DESCRIPTION
+    README.md.ps1 makes README.md
+
+    This is a simple and helpful scripting convention for writing READMEs.
+
+    `./README.md.ps1 > ./README.md`
+
+    Feel free to copy and paste this code.
+    
+    Please document your parameters, and add NOTES.
+.NOTES        
+    This README.md.ps1 is used to demonstrate [MarkX](https://github.com/PoshWeb/MarkX).
+.EXAMPLE
+    ./README.md.ps1 > ./README.md
+.EXAMPLE
+    Get-Help ./README.md.ps1
+.LINK
+    https://github.com/PoshWeb/MarkX
+#>
+#requires -Module MarkX
+param()
 @"
 
 # Hello World
