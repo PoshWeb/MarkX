@@ -6,6 +6,7 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
         if ($md -is [IO.FileInfo] -and 
             # and it had the extension .md or markdown
             $md.Extension -in '.md', '.markdown') {
+            $this | Add-Member NoteProperty '#Path' $md.Fullname -Force        
             $md = Get-Content -LiteralPath $md.Fullname -Raw 
             $md
             continue
@@ -111,12 +112,14 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             (Test-Path $md -ErrorAction Ignore)
         )        
     ) {
+        $resolvedPath = $ExecutionContext.SessionState.Path.GetResolvedPSPathFromPSPath($md)
+        $this | Add-Member NoteProperty '#Path' "$resolvedPath" -Force
         $md = Get-Content -Raw $md
     }
 
     $yamlheader = ''
     if ($md -match '^---') {
-        $null, $yamlheader, $md = $in -split '---', 3
+        $null, $yamlheader, $md = $md -split '---', 3
         if ($yamlheader) {
             $this | Add-Member NoteProperty '#YamlHeader' $yamlheader -Force
         }
