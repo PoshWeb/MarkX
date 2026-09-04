@@ -4,7 +4,23 @@
 .DESCRIPTION
     Gets the JavaScript header of a Markdown or mdx file.
 
-    We will consider anything before the first header element to be a javascript header.
+    Anything before the first
+    
+    * `# heading`
+    * `<tag>`
+    * or `<>` fragment 
+    
+    will be considered to be javascript, 
+    as long as it has a line beginning with:
+
+    * `import`
+    * `export`
+    * `const`
+    * `let`
+    * `document`
+    * `window`
 #>
-$before, $after = $this.Markdown -split '(?=\#{1,6}\s)', 2
-return $before
+$before, $after = $this.Markdown -split '(?=(?>\#{1,6}\s|\<\w+|\<\>))', 2
+if ($before -match '(?m)^\s{0,}(?>import|export|const|let|document|window)') {
+    return $before
+}
