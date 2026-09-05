@@ -45,14 +45,19 @@
 #&gt;
 $currentRows = @()
 
+$markXProtoType = [PSCustomObject]@{PSTypeName='MarkX'}
+
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
     if ($md -isnot [string]) {
         # If the markdown was a file
         if ($md -is [IO.FileInfo] -and 
-            # and it had the extension .md or markdown
-            $md.Extension -in '.md', '.markdown', '.mdx') {
-            $this | Add-Member NoteProperty '#Path' $md.Fullname -Force        
-            $md = Get-Content -LiteralPath $md.Fullname -Raw 
+            # and it had a markdown extension
+            $md.Extension -in $markXProtoType.MarkdownExtensions) {
+
+            $this |
+                Add-Member NoteProperty '#Path' $md.Fullname -Force
+
+            $md = Get-Content -LiteralPath $md.Fullname -Raw
             $md
             continue
         }
