@@ -884,7 +884,9 @@ if ($jsHeader) {
         
         $null, $after = $this.Markdown -split $this.StartPattern, 2
         if ($after) {
-            ($after | ConvertFrom-Markdown).Html
+            "&lt;article&gt;"
+                ($after | ConvertFrom-Markdown).Html
+            "&lt;/article&gt;"
         }
 
         "&lt;script type='module'&gt;"
@@ -903,7 +905,11 @@ if (-not $this.XML.XHTML) {
             Select-Object -ExpandProperty Html
     }
 }
-return ("$($this.XML.XHTML.InnerXML)" + [Environment]::NewLine)
+return @(
+    "&lt;article&gt;"
+    $($this.XML.XHTML.InnerXML)
+    "&lt;/article&gt;"
+) -join [Environment]::NewLine
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
