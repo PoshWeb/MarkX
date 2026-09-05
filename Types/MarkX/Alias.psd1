@@ -2,5 +2,7 @@
     DB = 'DataSet'
     Tables = 'Table'
     Link = 'Links'
-    Heading = 'Headings'    
+    Heading = 'Headings'
+    'Markpub.at' = 'Markpub'
+    'At.Markpub' = 'Markpub'
 }
