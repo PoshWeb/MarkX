@@ -20,7 +20,7 @@
     * `document`
     * `window`
 #>
-$before, $after = $this.Markdown -split '(?=(?>\#{1,6}\s|\<\w+|\<\>))', 2
+$before, $after = $this.Markdown -split $this.StartPattern, 2
 if ($before -match '(?m)^\s{0,}(?>import|export|const|let|document|window)') {
     return $before
 }
