@@ -21,11 +21,19 @@ $savePath =
         # If a path was passed, it can either be a real path
         # or, if a date is present
         if ($this.Date) {
-            # `ymd`, `y-m-d` or `year-month-day` a year month day post
+            # `ymd`, `y-m-d` or `year-month-day` a year month day post                        
             if ($path -in 'ymd', 'y-m-d', 'Year-Month-Day') {
-                "$($this.Date.ToString('yyyy-MM-DD')).md"
+                "$($this.Date.ToString('yyyy-MM-dd'))$(
+                    if ($this.Title) {
+                        "-$($this.Title -replace '[\p{P}\p{S}]', '-')"
+                    }
+                ).md"
             } elseif ($path -in 'y/m/d', 'Year/Month/Day') {
-                "$($this.Date.ToString('yyyy/MM/DD')).md"
+                "$($this.Date.ToString('yyyy/MM/dd'))$(
+                    if ($this.Title) {
+                        "/$($this.Title -replace '[\p{P}\p{S}]', '-')"
+                    }
+                ).md"                
             }
         } else {
             # Otherwise, use the specified path.
