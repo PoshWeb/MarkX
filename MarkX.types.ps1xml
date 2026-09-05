@@ -759,7 +759,7 @@ $this.Sync()
     * `document`
     * `window`
 #&gt;
-$before, $after = $this.Markdown -split '(?=(?&gt;\#{1,6}\s|\&lt;\w+|\&lt;\&gt;))', 2
+$before, $after = $this.Markdown -split $this.StartPattern, 2
 if ($before -match '(?m)^\s{0,}(?&gt;import|export|const|let|document|window)') {
     return $before
 }
@@ -1022,6 +1022,40 @@ return $this.'#Path'
 param([string]$Path)
 $this | Add-Member NoteProperty '#Path' $Path -Force
                     </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>StartPattern</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Start Pattern
+.DESCRIPTION
+    Gets a Regular Expression that matches the start of Markdown content.
+
+    Anything before this point may be considered JavaScript.
+.NOTES
+    The start pattern will look for the first of any of these tags:
+
+    * Heading 
+    * Tag
+    * Fragment
+    * Code Block
+#&gt;
+param()
+
+$lookingFor = @(
+    '\#{1,6}\s'
+    '\&lt;\w+'
+    '\&lt;\&gt;'
+    '`{3}'
+    '~{3}'
+)
+
+[Regex]::new(
+    "(?=(?&gt;$($lookingFor -join '|')))",
+    'IgnoreCase'
+)
+                    </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
         <Name>Table</Name>
