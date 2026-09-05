@@ -21,6 +21,6 @@
     * `window`
 #>
 $before, $after = $this.Markdown -split $this.StartPattern, 2
-if ($before -match '(?m)^\s{0,}(?>import|export|const|let|document|window)') {
+if ($before -match $this.JavaScriptKeywordPattern) {
     return $before
 }
