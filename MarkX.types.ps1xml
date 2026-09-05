@@ -1033,6 +1033,21 @@ else {
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>JSON</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown JSON
+.DESCRIPTION
+    Gets Markdown as JSON.
+    
+    Uses the [Markpub](https://markpub.at) format.
+#&gt;
+param()
+$this.markpub | ConvertTo-Json -Depth 100
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Lexicon</Name>
         <GetScriptBlock>
                         &lt;#
