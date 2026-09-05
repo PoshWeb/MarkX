@@ -118,6 +118,7 @@ if ($inputNumber) {
     # We need to complete our progress bars.
     $progress.Remove('PercentComplete')
     $progress.Completed = $true
+    Write-Progress @progress
 }
 
 # If there was no remaining input, return
