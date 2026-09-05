@@ -20,22 +20,7 @@
 $jsHeader = $this.JavaScript
 $header = $this.Header
 
-# If there is not a javascript header, 
-
-if (-not $jsHeader) {
-    # but the front matter contains javascript
-    if ($header.javascript) {
-        # that will do.
-        $jsHeader = $header.javascript
-    } elseif (
-        # otherwise, if the header is a string and contains javascript keywords
-        $header -is [string] -and $header -match $this.JavaScriptKeywordPattern
-    ) {
-        # treat this as the javascript header.
-        $jsHeader = $header
-    }
-}
-if ($jsHeader) {    
+if ($jsHeader) {
     return @(
         # If the header had a title
         if ($header.title) {
@@ -50,9 +35,9 @@ if ($jsHeader) {
         }
 
         # If the header had any opengraph keys
-        foreach ($openGraph in @($header.Keys) -match ':') {
+        foreach ($openGraph in @($header.Keys) -match '[:_]') {
             # propagate them into `<meta>` elements.
-            "<meta property='$($openGraph)' content='$(
+            "<meta property='$($openGraph -replace '_',':')' content='$(
                 [Web.HttpUtility]::HtmlAttributeEncode(
                     "$($header.$openGraph)"
                 ))' />"
@@ -88,8 +73,8 @@ if (-not $this.XML.XHTML) {
         return "$($this.'#HTML')" + [Environment]::NewLine
     }
     else {
-        return $this.Markdown |
-            ConvertFrom-Markdown |
+        return ($this.Markdown |
+            ConvertFrom-Markdown).Html |
             Select-Object -ExpandProperty Html
     }
 }

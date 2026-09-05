@@ -20,7 +20,19 @@
     * `document`
     * `window`
 #>
-$before, $after = $this.Markdown -split $this.StartPattern, 2
-if ($before -match $this.JavaScriptKeywordPattern) {
-    return $before
+param()
+
+$header = $this.Header
+
+if ($header -is [string] -and $header -match $this.JavaScriptKeywordPattern) {
+    return $header
+}
+elseif ($header.javascript -match $this.JavaScriptKeywordPattern) {
+    return $header.javascript
+}
+else {
+    $before, $after = $this.Markdown -split $this.StartPattern, 2
+    if ($before -match $this.JavaScriptKeywordPattern) {
+        return $before
+    }
 }
