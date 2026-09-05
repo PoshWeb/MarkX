@@ -16,6 +16,10 @@
         </Members>
       </MemberSet>
       <AliasProperty>
+        <Name>At.Markpub</Name>
+        <ReferencedMemberName>Markpub</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
         <Name>DB</Name>
         <ReferencedMemberName>DataSet</ReferencedMemberName>
       </AliasProperty>
@@ -26,6 +30,10 @@
       <AliasProperty>
         <Name>Link</Name>
         <ReferencedMemberName>Links</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>Markpub.at</Name>
+        <ReferencedMemberName>Markpub</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
         <Name>Tables</Name>
