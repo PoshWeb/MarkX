@@ -1158,9 +1158,14 @@ if (-not $convertToYaml) {
 }
 
 $convertParameters = @{}
-if ($convertToYaml.Parameters['Depth']) {
-    $convertParameters['Depth'] = $FormatEnumerationLimit
+try {
+    if ($convertToYaml -and $convertToYaml.Parameters['Depth']) {
+        $convertParameters['Depth'] = $FormatEnumerationLimit
+    }
+} catch {
+    Write-Warning "Could not set depth:  Please use YaYaml"    
 }
+
 $toYaml = $header | &amp; $convertToYaml @convertParameters
 if ($toYaml -is [string]) {
     $this | Add-Member NoteProperty '#YamlHeader' $toYaml -Force
