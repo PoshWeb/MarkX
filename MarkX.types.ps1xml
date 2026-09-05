@@ -1351,6 +1351,46 @@ $this.XML |
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>Tags</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets the Markdown tags
+.DESCRIPTION
+    Gets the Markdown tags, according to it's YamlHeader `tags` field.
+#&gt;
+param()
+
+return $this.Header.tags
+
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets the Markdown tags
+.DESCRIPTION
+    Sets the Markdown tags, according to it's YamlHeader `tags` field.
+#&gt;
+param(
+[string[]]
+$Tags
+)
+
+$header = $this.Header
+if (-not $header) { 
+    $this.YamlHeader = [Ordered]@{
+        tags = $Tags
+    }
+    return
+}
+$header.tags = $Tags
+$this.YamlHeader = $header
+
+return $this.Header.tags
+
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Title</Name>
         <GetScriptBlock>
                         &lt;#
