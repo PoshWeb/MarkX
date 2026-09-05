@@ -6,9 +6,9 @@
     
     This contains both the Markdown and the YAML Header.
 #>
-@(if ($this.YamlHeader) {
+@(if ($this.FrontMatter) {
     "---"
-    $this.YamlHeader
+    $this.FrontMatter
     "---"
     $this.Markdown
 } else {
