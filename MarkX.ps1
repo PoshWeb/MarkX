@@ -55,6 +55,7 @@ $allInput = @($input) + $(if ($args) {
 # So we need to make a pass over each input
 $remainingInput = @()
 $inputFiles = @()
+$markXProtoType = [PSCustomObject]@{PSTypename='MarkX'}
 foreach ($in in $AllInput) {
     # If the input starts as slashes
     $inFile = if ($in -match '^\.[\\/]') {
@@ -80,7 +81,7 @@ foreach ($in in $AllInput) {
     }
     
     # If the file was not markdown or mdx.
-    if ($inFile.Extension -notin '.md', '.markdown', '.mdx') {
+    if ($inFile.Extension -notin $markXProtoType.MarkdownExtension) {
         # we will treat the input as markdown
         $remainingInput += $in
         continue # and should continue.
@@ -123,7 +124,7 @@ if ($inputNumber) {
 if (-not $remainingInput.Length) { return }
 # Otherwise, create a property bag for the Markdown.
 $markx = New-Object PSObject -Property @{
-    PSTypeName = 'MarkX'        
+    PSTypeName = 'MarkX'
 }
 # set its input to all remaining input
 $markx.Input = $remainingInput
