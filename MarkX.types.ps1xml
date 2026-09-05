@@ -760,9 +760,31 @@ $this.Sync()
     * `window`
 #&gt;
 $before, $after = $this.Markdown -split $this.StartPattern, 2
-if ($before -match '(?m)^\s{0,}(?&gt;import|export|const|let|document|window)') {
+if ($before -match $this.JavaScriptKeywordPattern) {
     return $before
 }
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>JavaScriptKeywordPattern</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets JavaScript Keyword Pattern
+.DESCRIPTION
+    Gets a keyword pattern that denotes JavaScript
+
+    Will match any line beginning with optional whitespace followed by one of:
+
+    * `import`
+    * `export`
+    * `const`
+    * `let`
+    * `document`
+    * `window`
+#&gt;
+[Regex]::new('^\s{0,}(?&gt;import|export|const|let|document|window)', 'Multiline,IgnoreCase')
 
                     </GetScriptBlock>
       </ScriptProperty>
