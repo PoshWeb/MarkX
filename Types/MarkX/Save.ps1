@@ -40,6 +40,12 @@ $savePath =
             $path
         }
     }
+    # If the markdown already had a path
+    # and we did not explicitly provide one
+    elseif ($this.Path) {
+        # Keep it where it is.
+        $this.Path
+    }
     # Otherwise, if the post had a title
     elseif ($this.Title) {
         # and a date
