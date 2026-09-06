@@ -34,5 +34,11 @@ else {
         throw "Header is a string, cannot set layout"        
     }
 
-    $this.Header = $header
+    $this.Header = $header    
+}
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the title in the page.
+    $this.'#Page'.layout = $Layout
 }
