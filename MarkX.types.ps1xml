@@ -796,6 +796,12 @@ if (-not $header) {
 }
 $header.date = $Date
 $this.YamlHeader = $header
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the date in the page.
+    $this.'#Page'.date = $Date
+}
                     </SetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
@@ -1343,6 +1349,100 @@ $markpub.text = [PSCustomObject]$markpub.text
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>Page</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown as a Page
+.DESCRIPTION
+    Gets Markdown content as a Page dictionary.
+
+    This can contain any data and be used in any way.  
+    
+    It will not be saved to disk.
+.NOTES
+    Some front-matter properties will be synchronized into page data when set.
+
+    
+#&gt;
+if (-not $this.'#Page') {
+    $this |
+        Add-Member NoteProperty '#Page' ([Ordered]@{
+            title = $this.title            
+            content = $this.html
+        }) -Force
+}
+
+if ($this.date) {
+    $this.'#Page'.date = $this.date
+}
+if ($this.tags) {
+    $this.'#Page'.tags = $this.tags
+}
+
+$layout = $this.layout
+
+if ($layout -is [string]) {
+    $this.'#Page'.layout = $layout    
+}
+
+
+$this.'#Page' | 
+    Add-Member NoteProperty MarkX $This -Force
+
+$this.'#Page' | 
+    Add-Member ScriptMethod ToString {
+        $layout = $this.MarkX.Layout
+        if ($layout -is [ScriptBlock]) {
+            $this['Content'] | . $layout
+        } else {
+            $this['Content']
+        }    
+    } -Force 
+
+$this.'#Page'
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Page data
+.DESCRIPTION
+    Sets Markdown Page data.
+    
+    Merges data with existing data and sets properties on the object.
+.NOTES
+    This data is somewhat independent of the front matter.
+
+    It will not be saved, and may be interpreted differently by different engines.
+
+    When it is initialized, various front matter may be replicated into page data.
+
+    When set, settable properties on this object will be changed, 
+    and may propagate into page data.
+#&gt;
+param([Collections.IDictionary]$Page)
+
+$oldPage = $this.Page
+
+foreach ($key in $page.Keys) {
+    # If this was something we could set
+    if ($key -and $this.psobject.Properties[$key].IsSettable) {
+        # set it.
+        $this.$key = $page[$key]
+        # This should propagate any data, but, if it did not
+        if (-not $oldPage[$key]) {
+            # set it in the page.
+            $oldPage[$key] = $page[$key]
+        }
+    } else {
+        # Otherwise, simply set the property on our page.
+        $oldPage[$key] = $page[$key]
+    }
+}
+
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Path</Name>
         <GetScriptBlock>
                         &lt;#
@@ -1484,7 +1584,13 @@ if (-not $header) {
 $header.tags = $Tags
 $this.YamlHeader = $header
 
-return $this.Header.tags
+# If page data has been accessed,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the tags
+    $this.'#Page'.tags = $Tags
+}
+
+
 
                     </SetScriptBlock>
       </ScriptProperty>
@@ -1540,6 +1646,12 @@ if (-not $header) {
 }
 $header.title = $Title
 $this.YamlHeader = $header
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the title in the page.
+    $this.'#Page'.title = $Title
+}
                     </SetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
