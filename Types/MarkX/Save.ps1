@@ -92,10 +92,7 @@ switch -regex ($savePath) {
     # If it is json
     '\.json$' {
         # we will save it as [MarkPub](https://markpub.at).
-        $saveSplat.Value = "$(
-            $this.MarkPub | 
-                ConvertTo-Json -Depth 100
-        )"
+        $saveSplat.Value = "$($this.JSON)"
     }
     # If it is `.html`
     '\.html?$' {
@@ -107,14 +104,13 @@ switch -regex ($savePath) {
     # If it is `.svg`
     # create an element with a `<foreignObject>`  inside of it.    
     '\.svg$' {
+        $svg = $this.SVG
         $saveSplat.Value = @(
-            "<svg xmlns='http://www.w3.org/2000/svg'>"
-            "<foreignObject width='100%' height='100%'>"
-            "<xhtml xmlns='http://www.w3.org/1999/xhtml'>"
-            $this.HTML
-            "</xhtml>"
-            "</foreignObject>"
-            "</svg>"
+            if ($svg.OuterXml){
+                $svg.OuterXml
+            } else {
+                $svg
+            }
         ) -join [Environment]::NewLine
     }
 }
