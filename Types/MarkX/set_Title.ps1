@@ -18,3 +18,9 @@ if (-not $header) {
 }
 $header.title = $Title
 $this.YamlHeader = $header
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the title in the page.
+    $this.'#Page'.title = $Title
+}

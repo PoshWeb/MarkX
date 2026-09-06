@@ -18,3 +18,9 @@ if (-not $header) {
 }
 $header.date = $Date
 $this.YamlHeader = $header
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the date in the page.
+    $this.'#Page'.date = $Date
+}

@@ -19,4 +19,10 @@ if (-not $header) {
 $header.tags = $Tags
 $this.YamlHeader = $header
 
-return $this.Header.tags
+# If page data has been accessed,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the tags
+    $this.'#Page'.tags = $Tags
+}
+
+
