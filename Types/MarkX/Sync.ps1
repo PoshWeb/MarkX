@@ -16,7 +16,7 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
         # If the markdown was a file
         if ($md -is [IO.FileInfo] -and 
             # and it had a markdown extension
-            $md.Extension -in $markXProtoType.MarkdownExtensions) {
+            $md.Extension -in $markXProtoType.MarkdownExtension) {
 
             $this |
                 Add-Member NoteProperty '#Path' $md.Fullname -Force
