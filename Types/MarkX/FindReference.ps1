@@ -38,7 +38,9 @@ $LookBehind = "(?<=(?>^|[\s\>'`"_\(]))"
 # the end anchor or any whitespace, end tag, quote, underscore, or close parenthesis
 $LookAhead  = "(?=(?>$|[\s\>'`"_\.,\)]))"
 
-$referencePattern = [Regex]::new("$LookBehind(?>$(
+$NotAfter = '(?<!\#{1,6}[\s\S-[\r\n]])'
+
+$referencePattern = [Regex]::new("${LookBehind}${NotAfter}(?>$(
     @(foreach ($k in $sortedKeys) {
         [Regex]::Escape($k) -replace '\\\s', '[\s\-_]'
     }) -join '|'
