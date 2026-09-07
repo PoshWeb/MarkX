@@ -40,8 +40,8 @@
         <ReferencedMemberName>Heading</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
-        <Name>Link</Name>
-        <ReferencedMemberName>Links</ReferencedMemberName>
+        <Name>Links</Name>
+        <ReferencedMemberName>Link</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
         <Name>MarkdownContentTypes</Name>
@@ -1485,7 +1485,7 @@ $markdownData = $this.DataSet
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
-        <Name>Links</Name>
+        <Name>Link</Name>
         <GetScriptBlock>
                         foreach ($aNode in $this.XML | Select-Xml //a) {
     if ($aNode.Node.href) {
