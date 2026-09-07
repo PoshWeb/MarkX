@@ -179,8 +179,10 @@ $Markdown = $this.'#Markdown'
 
 if (-not $Markdown) { return }
 
-$mdPipelineBuilder = [Markdig.MarkdownPipelineBuilder]::new()
-$mdPipeline = [Markdig.MarkdownExtensions]::UsePipeTables($mdPipelineBuilder).Build()
+$mdPipelineBuilder = [Markdig.MarkdownExtensions]::UseAdvancedExtensions(
+    [Markdig.MarkdownPipelineBuilder]::new()
+)
+$mdPipeline = $mdPipelineBuilder.Build()
 
 $this | 
     Add-Member NoteProperty '#HTML' (
