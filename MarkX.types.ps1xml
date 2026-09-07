@@ -36,10 +36,6 @@
         <ReferencedMemberName>FindReference</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
-        <Name>Heading</Name>
-        <ReferencedMemberName>Headings</ReferencedMemberName>
-      </AliasProperty>
-      <AliasProperty>
         <Name>Headings</Name>
         <ReferencedMemberName>Heading</ReferencedMemberName>
       </AliasProperty>
