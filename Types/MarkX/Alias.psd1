@@ -2,6 +2,7 @@
     DB = 'DataSet'
     Tables = 'Table'
     Link = 'Links'
+    TOC = 'TableOfContents'
     'Markpub.at' = 'Markpub'
     'At.Markpub' = 'Markpub'
 
