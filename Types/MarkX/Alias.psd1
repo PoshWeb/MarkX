@@ -1,7 +1,6 @@
 @{
     DB = 'DataSet'
-    Tables = 'Table'
-    Link = 'Links'
+    Tables = 'Table'    
     TOC = 'TableOfContents'
     'Markpub.at' = 'Markpub'
     'At.Markpub' = 'Markpub'
@@ -16,4 +15,6 @@
     MarkdownContentTypes = 'MarkdownContentTypes'
 
     Headings = 'Heading'
+
+    Links = 'Link'
 }
