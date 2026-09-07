@@ -599,14 +599,18 @@ $Markdown = $this.'#Markdown'
 
 if (-not $Markdown) { return }
 
-$mdPipelineBuilder = [Markdig.MarkdownExtensions]::UseAdvancedExtensions(
-    [Markdig.MarkdownPipelineBuilder]::new()
-)
+$mdPipelineBuilder = 
+    [Markdig.MarkdownExtensions]::UseYamlFrontMatter(
+        [Markdig.MarkdownExtensions]::UseAdvancedExtensions(
+            [Markdig.MarkdownPipelineBuilder]::new()
+        )
+    )
+
 $mdPipeline = $mdPipelineBuilder.Build()
 
 $this | 
     Add-Member NoteProperty '#HTML' (
-        [Markdig.Markdown]::ToHtml($markdown, $mdPipeline)
+        [Markdig.Markdown]::ToHtml($markdown, $mdPipeline) -replace '\sdisabled="disabled"'
     ) -Force
 
 $this | 
