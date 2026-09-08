@@ -1,14 +1,16 @@
 param($header)
 
 if ($header -is [string]) {
-    $this | Add-Member NoteProperty '#YamlHeader' $header -Force
-    $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
+    $this | Add-Member NoteProperty '#FrontMatter' $header -Force
     return
 }
 
 $convertToYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Yaml', 'Alias,Cmdlet,Function')
 if (-not $convertToYaml) {
-    Write-Warning "Cannot set yaml header without ConvertTo-Yaml"
+    Write-Warning "ConvertTo-Yaml not found, setting header as json"
+    $jsonHeader = $header | ConvertTo-Json -Depth 100 
+    $this | Add-Member NoteProperty '#JsonHeader' $jsonHeader -Force
+    $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
     return
 }
 
@@ -18,13 +20,12 @@ try {
         $convertParameters['Depth'] = $FormatEnumerationLimit
     }
 } catch {
-    Write-Warning "Could not set depth:  Please use YaYaml"    
+    Write-Verbose "Could not set depth:  Please use YaYaml: $_"    
 }
-
-$toYaml = $header | & $convertToYaml @convertParameters
-if ($toYaml -is [string]) {
-    $this | Add-Member NoteProperty '#YamlHeader' $toYaml -Force
-    $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
+finally {
+    $toYaml = $header | & $convertToYaml @convertParameters
+    if ($toYaml -is [string]) {
+        $this | Add-Member NoteProperty '#YamlHeader' $toYaml -Force
+        $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
+    }
 }
-
-
