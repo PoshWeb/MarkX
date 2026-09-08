@@ -1234,6 +1234,34 @@ $this.YamlHeader = $header
                     </SetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>FrontMatterType</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Front Matter Type
+.DESCRIPTION
+    Gets the type of Front Matter in a file.
+#&gt;
+
+switch -regex ($this.FrontMatter) {
+    '(?m)^\[[\w\d_\.]+\]' {
+        return 'toml'
+    }
+    $this.JavaScriptKeywordPattern {
+        return "javascript"
+    }
+    '(?m)^[\{\[]' {
+        return 'json'
+    }
+    '(?m)^[\w-]+:' {
+        return 'yaml'
+    }
+}
+
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Header</Name>
         <GetScriptBlock>
                         if (-not $this.'#YamlHeader') { return }
