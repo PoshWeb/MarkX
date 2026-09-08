@@ -14,7 +14,7 @@
 #>
 switch ($this.FrontMatterType) {
     yaml {
-        return $this.'#YamlHeader'
+        return $this.'#FrontMatter'
     }
     default {
         $header = $this.Header
@@ -39,7 +39,6 @@ switch ($this.FrontMatterType) {
         finally {
             $header | & $convertToYaml @convertParameters
             if ($toYaml -is [string]) {
-                $this | Add-Member NoteProperty '#YamlHeader' $toYaml -Force
                 $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
             }
         }        

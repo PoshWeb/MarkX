@@ -37,7 +37,6 @@ try {
 finally {
     $toToml = $header | & $convertToToml @convertParameters
     if ($toYaml -is [string]) {
-        $this | Add-Member NoteProperty '#TomlHeader' $toToml -Force
         $this | Add-Member NoteProperty '#FrontMatter' $toToml -Force
     }
 }

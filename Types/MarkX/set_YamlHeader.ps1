@@ -8,8 +8,7 @@ if ($header -is [string]) {
 $convertToYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Yaml', 'Alias,Cmdlet,Function')
 if (-not $convertToYaml) {
     Write-Warning "ConvertTo-Yaml not found, setting header as json"
-    $jsonHeader = $header | ConvertTo-Json -Depth 100 
-    $this | Add-Member NoteProperty '#JsonHeader' $jsonHeader -Force
+    $jsonHeader = $header | ConvertTo-Json -Depth 100     
     $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
     return
 }
@@ -25,7 +24,6 @@ try {
 finally {
     $toYaml = $header | & $convertToYaml @convertParameters
     if ($toYaml -is [string]) {
-        $this | Add-Member NoteProperty '#YamlHeader' $toYaml -Force
         $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
     }
 }
