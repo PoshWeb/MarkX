@@ -1502,6 +1502,60 @@ $this.markpub | ConvertTo-Json -Depth 100
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>JsonHeader</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Json Header
+.DESCRIPTION
+    Gets Markdown Front Matter as JSON.
+
+    If the front matter type is JSON, this will directly return the front matter.
+
+    If the front matter type is not a `[string]`, this will convert the front matter to json.
+#&gt;
+switch ($this.FrontMatterType) {
+    json {
+        return $this.'#FrontMatter'
+    }
+    default {        
+        $header = $this.Header
+        if ($header -isnot [string]) {
+            return $header | ConvertTo-Json -Depth 100
+        } else {
+            return $header
+        }         
+    }    
+}
+
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Json Header
+.DESCRIPTION
+    Sets the Markdown Front Matter as a JSON header.
+
+    If the value is a `[string]`, will directly set front matter.
+    
+    If the value is not a `[string]`, it will be converted to JSON.
+#&gt;
+param($header)
+
+if ($header -is [string]) {
+    $this | Add-Member NoteProperty '#FrontMatter' $header -Force
+    return
+}
+
+$jsonHeader = $header | ConvertTo-Json -Depth 100
+
+$this | Add-Member NoteProperty '#JsonHeader' $jsonHeader -Force
+$this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
+
+return
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>Layout</Name>
         <GetScriptBlock>
                         &lt;#
