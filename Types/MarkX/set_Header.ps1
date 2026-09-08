@@ -1,3 +1,3 @@
 param($header)
 
-$this.YamlHeader = $header
+$this.FrontMatter = $header
