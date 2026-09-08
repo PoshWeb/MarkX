@@ -28,6 +28,10 @@
         <ReferencedMemberName>DataSet</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
+        <Name>Files</Name>
+        <ReferencedMemberName>File</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
         <Name>FindCodeblocks</Name>
         <ReferencedMemberName>FindCodeBlock</ReferencedMemberName>
       </AliasProperty>
