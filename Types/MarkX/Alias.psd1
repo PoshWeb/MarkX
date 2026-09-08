@@ -17,4 +17,6 @@
     Headings = 'Heading'
 
     Links = 'Link'
+
+    Files = 'File'
 }
