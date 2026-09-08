@@ -6,7 +6,7 @@
 #>
 
 switch -regex ($this.FrontMatter) {
-    '(?m)^\[[\w\d_\.]+\]' {
+    '(?m)^.+?=' {
         return 'toml'
     }
     $this.JavaScriptKeywordPattern {
