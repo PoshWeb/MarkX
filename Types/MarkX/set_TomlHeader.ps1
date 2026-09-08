@@ -19,7 +19,7 @@ if ($header -is [string]) {
 
 $convertToToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Toml', 'Alias,Cmdlet,Function')
 if (-not $convertToToml) {
-    Write-Warning "ConvertTo-Yaml not found, setting header as json"
+    Write-Warning "ConvertTo-Toml not found, setting header as json"
     $jsonHeader = $header | ConvertTo-Json -Depth 100
     $this | Add-Member NoteProperty '#JsonHeader' $jsonHeader -Force
     $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
@@ -36,7 +36,7 @@ try {
 }
 finally {
     $toToml = $header | & $convertToToml @convertParameters
-    if ($toYaml -is [string]) {
+    if ($toToml -is [string]) {
         $this | Add-Member NoteProperty '#FrontMatter' $toToml -Force
     }
 }
