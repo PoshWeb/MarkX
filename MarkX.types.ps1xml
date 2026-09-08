@@ -1600,7 +1600,7 @@ switch ($this.FrontMatterType) {
     Sets the Markdown Front Matter as a JSON header.
 
     If the value is a `[string]`, will directly set front matter.
-    
+
     If the value is not a `[string]`, it will be converted to JSON.
 #&gt;
 param($header)
@@ -1612,7 +1612,6 @@ if ($header -is [string]) {
 
 $jsonHeader = $header | ConvertTo-Json -Depth 100
 
-$this | Add-Member NoteProperty '#JsonHeader' $jsonHeader -Force
 $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
 
 return
@@ -2457,7 +2456,6 @@ try {
 finally {
     $toToml = $header | &amp; $convertToToml @convertParameters
     if ($toYaml -is [string]) {
-        $this | Add-Member NoteProperty '#TomlHeader' $toToml -Force
         $this | Add-Member NoteProperty '#FrontMatter' $toToml -Force
     }
 }
@@ -2494,7 +2492,7 @@ return $this.'#XML'
 #&gt;
 switch ($this.FrontMatterType) {
     yaml {
-        return $this.'#YamlHeader'
+        return $this.'#FrontMatter'
     }
     default {
         $header = $this.Header
@@ -2519,7 +2517,6 @@ switch ($this.FrontMatterType) {
         finally {
             $header | &amp; $convertToYaml @convertParameters
             if ($toYaml -is [string]) {
-                $this | Add-Member NoteProperty '#YamlHeader' $toYaml -Force
                 $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
             }
         }        
@@ -2538,8 +2535,7 @@ if ($header -is [string]) {
 $convertToYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Yaml', 'Alias,Cmdlet,Function')
 if (-not $convertToYaml) {
     Write-Warning "ConvertTo-Yaml not found, setting header as json"
-    $jsonHeader = $header | ConvertTo-Json -Depth 100 
-    $this | Add-Member NoteProperty '#JsonHeader' $jsonHeader -Force
+    $jsonHeader = $header | ConvertTo-Json -Depth 100     
     $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
     return
 }
@@ -2555,7 +2551,6 @@ try {
 finally {
     $toYaml = $header | &amp; $convertToYaml @convertParameters
     if ($toYaml -is [string]) {
-        $this | Add-Member NoteProperty '#YamlHeader' $toYaml -Force
         $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
     }
 }
