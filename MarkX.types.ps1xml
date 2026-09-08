@@ -2305,6 +2305,102 @@ if ($this.'#Page' -is [Collections.IDictionary]) {
                     </SetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>TomlHeader</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown TOML Header
+.DESCRIPTION
+    Gets Markdown Front Matter as TOML.
+
+    If the front matter is already TOML, will return as-is.
+
+    If the front matter is not TOML and is not a `[string]`, it will be converted to TOML.
+
+    If the front matter is a string, it will be returned directly.    
+
+    If `ConvertTo-Toml` is not loaded, it will return as JSON.    
+#&gt;
+switch ($this.FrontMatterType) {
+    toml {
+        return $this.'#FrontMatter'
+    }
+    default {        
+        $header = $this.Header
+
+        if ($header -is [string]) {
+            return $header
+        }
+
+        $convertToToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Toml', 'Alias,Cmdlet,Function')
+        if (-not $convertToToml) {
+            Write-Warning "ConvertTo-Toml not found, getting header as json"
+            $header | ConvertTo-Json -Depth 100
+            return
+        }
+
+        $convertParameters = @{}
+        return $(try {
+            if ($convertToToml -and $convertToToml.Parameters['Depth']) {
+                $convertParameters['Depth'] = $FormatEnumerationLimit
+            }
+        } catch {
+            Write-Verbose "Could not set depth:  Please use YaYaml: $_"    
+        }
+        finally {
+            $header | &amp; $convertToToml @convertParameters            
+        })                    
+    }    
+}
+return
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Toml Header
+.DESCRIPTION
+    Sets the Markdown Front Matter as a Toml header.
+
+    If the value is a `[string]`, will directly set front matter.
+    
+    If the value is not a `[string]`, it will be converted to Toml.
+
+    If `ConvertTo-Toml` is not installed, will `ConvertTo-Json`.
+#&gt;
+param($header)
+
+if ($header -is [string]) {
+    $this | Add-Member NoteProperty '#FrontMatter' $header -Force
+    return
+}
+
+$convertToToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Toml', 'Alias,Cmdlet,Function')
+if (-not $convertToToml) {
+    Write-Warning "ConvertTo-Yaml not found, setting header as json"
+    $jsonHeader = $header | ConvertTo-Json -Depth 100
+    $this | Add-Member NoteProperty '#JsonHeader' $jsonHeader -Force
+    $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
+    return
+}
+
+$convertParameters = @{}
+try {
+    if ($convertToToml -and $convertToToml.Parameters['Depth']) {
+        $convertParameters['Depth'] = $FormatEnumerationLimit
+    }
+} catch {
+    Write-Verbose "Could not set depth:  Please use YaYaml: $_"    
+}
+finally {
+    $toToml = $header | &amp; $convertToToml @convertParameters
+    if ($toYaml -is [string]) {
+        $this | Add-Member NoteProperty '#TomlHeader' $toToml -Force
+        $this | Add-Member NoteProperty '#FrontMatter' $toToml -Force
+    }
+}
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>XML</Name>
         <GetScriptBlock>
                         &lt;#
