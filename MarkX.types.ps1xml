@@ -1285,7 +1285,7 @@ switch ($this.FrontMatterType) {
 #&gt;
 
 switch -regex ($this.FrontMatter) {
-    '(?m)^.+?=' {
+    '^[\s\r\n]{0,}(?&gt;\[\w+|.+?=)' {
         return 'toml'
     }
     $this.JavaScriptKeywordPattern {
