@@ -60,6 +60,10 @@
         <ReferencedMemberName>Markpub</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
+        <Name>PageType</Name>
+        <ReferencedMemberName>SiteType</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
         <Name>Tables</Name>
         <ReferencedMemberName>Table</ReferencedMemberName>
       </AliasProperty>
@@ -2175,6 +2179,49 @@ foreach ($siteInfo in $site) {
 
 return $this.'#Site'
                     </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>SiteType</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets the Site Type
+.DESCRIPTION
+    Gets the Site or Page Type.
+
+    Will scan any files in the site or page for what technology is being used.
+
+    Multiple site types will most likely be detected.
+#&gt;
+param()
+
+# This list will expand with time
+
+@(switch -regex ($this.File.Name) {
+    '\.css(?&gt;\.|$)' { 'css'}
+    '\.c(?&gt;\.|$)' { 'c' }
+    '\.cpp(?&gt;\.|$)' { 'c++' }
+    '\.rs(?&gt;\.|$)' { 'rust' }
+    '\.go(?&gt;\.|$)' { 'go' }
+    '\.html(?&gt;\.|$)' { 'html '}
+    '\.js(?&gt;\.|$)' { 'javascript' }
+    '\.json(?&gt;\.|$)' { 'json' }
+    '\.jsx(?&gt;\.|$)' { 'jsx'}
+    '\.md(?&gt;\.|$)' { 'markdown'}
+    '\.mdx(?&gt;\.|$)' { 'mdx'}
+    '\.ps[dm]?1$' { 'PowerShell' }
+    '\.pl(?&gt;\.|$)' { 'Perl'}
+    '\.php(?&gt;\.|$)' { 'PHP'}
+    '\.ts(?&gt;\.|$)' { 'typescript' }    
+    '^hugo\.' { 'hugo' }
+    'astro' { 'astro'}
+    'eleventy' { 'eleventy' }
+    'jekyll' { 'jekyll' }
+    'package\.json' { 'javascript' }
+    'tsconfig' { 'typescript'}
+}) | Select-Object -Unique
+
+                    </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
         <Name>StartPattern</Name>
