@@ -122,7 +122,13 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
                         $codeBlock
                         "~~~"
                     }
-                ) -join [Environment]::NewLine                
+                ) -join [Environment]::NewLine
+                source = 
+                    if ($this -is [ScriptBlock]) {
+                        $this.Ast.ToString()
+                    } elseif ($this.ScriptBlock) {
+                        "$($this.ScriptBlock.Ast.ToString())"
+                    }
             }
 
             @(                                
@@ -134,16 +140,20 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
                 
                 if ($helpObject.description) {
                     "### $($helpObject.description)"
+                    [Environment]::NewLine
                 }
 
                 if ($helpObject.inputs) {
                     "### Inputs"
+                    [Environment]::NewLine
                     $helpObject.inputs
+                    [Environment]::NewLine
                 }
 
                 if ($helpObject.outputs) {
                     "### Outputs"
                     $helpObject.outputs
+                    [Environment]::NewLine
                 }
 
                 if ($helpObject.notes) {
@@ -151,9 +161,24 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
                         "### Notes"
                     }
                     $helpObject.notes
+                    [Environment]::NewLine
                 }                                
                 
+                [Environment]::NewLine
                 $helpObject.examples
+                [Environment]::NewLine
+
+                if ($helpObject.source -and 
+                    -not ($helpObject.source -match '(?m)^(?>~~~|```)PowerShell')
+                ) {
+                    "<details><summary>View Source</summary>"
+                    ""                    
+                    "~~~PowerShell"
+                    $helpObject.Source
+                    "~~~"
+                    "</details>"
+                    [Environment]::NewLine
+                }
             ) -join [Environment]::NewLine
 
             $header = $this.Header
