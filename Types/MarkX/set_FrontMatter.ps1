@@ -22,7 +22,7 @@ if ($header -is [string]) {
     return
 }
 
-switch ($this.FrontMatterType) {
+switch ("$($this.FrontMatterType)") {
     # If the header is javascript    
     javascript {
         # set the front matter as a string.
