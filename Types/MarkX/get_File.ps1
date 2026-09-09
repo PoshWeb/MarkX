@@ -15,13 +15,15 @@ $noise = '[\\/](?>node_modules)'
 
 $enumOptions = [IO.EnumerationOptions]::new()
 $enumOptions.RecurseSubdirectories = $true
+
 $thisPath = $this.Path
 if ($thisPath) {
     if ([IO.File]::Exists($thisPath)) {
         return ($thisPath -as [IO.FileInfo])
     } elseif ([IO.Directory]::Exists($thisPath)) {
-        return 
-            @(($thisPath -as [IO.DirectoryInfo]).EnumerateFiles('*',$enumOptions)) -notmatch $noise
+        return @(
+            ($thisPath -as [IO.DirectoryInfo]).EnumerateFiles('*',$enumOptions)
+        ) -notmatch $noise
     }
 } else {
     if ($this.Site.root) {        
