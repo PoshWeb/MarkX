@@ -538,6 +538,12 @@ $markXProtoType = [PSCustomObject]@{PSTypeName='MarkX'}
 
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
     if ($md -isnot [string]) {
+        if ($md -is [IO.DirectoryInfo]) {
+            $this |
+                Add-Member NoteProperty '#Path' $md.Fullname -Force
+            $this.Site = "$($md.FullName)"
+            continue nextInput
+        }
         # If the markdown was a file
         if ($md -is [IO.FileInfo] -and 
             # and it had a markdown extension
@@ -550,6 +556,11 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             $md
             continue
         }
+
+        if ($md -is [ScriptBlock]) {
+            ${function:Lambda λ} = $md
+            $md = $ExecutionContext.SessionState.InvokeCommand.GetCommand('Lambda λ', 'Function')
+        }
         
         if ($md -is [Management.Automation.CommandInfo]) {
             $cmdHelp = if (
@@ -558,68 +569,130 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             ) {
                 Get-Help -Name $md.Name
             } elseif ($md -is [Management.Automation.ExternalScriptInfo]) {
+                $this | Add-Member NoteProperty '#Path' "$($md.Source)" -Force
                 Get-Help -Name $md.Source
             } else {
                 continue nextInput
+            }                        
+
+            $thisScriptBlock = 
+                if ($this -is [ScriptBlock]) {
+                    $this
+                } elseif ($this.ScriptBlock) {
+                    $this.ScriptBlock
+                }
+
+            if ($thisScriptBlock) {    
+                $frontMatter = @(foreach ($attr in $thisScriptBlock.Attributes) {
+                    if ($attr -is [Reflection.AssemblyMetaDataAttribute] -and
+                        $attr.Key -match 'Front[\s\p{P}]{0,}Matter') {
+                        $attr.Value
+                    }   
+                })
+                if ($frontMatter) {
+                    $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
+                }
             }
+
             if ($cmdHelp) {
-                $md = $cmdHelp                
+                $md = $cmdHelp
             }
         }
 
         if ($md.pstypenames -match 'HelpInfo') {
-            @(
-                if ($md.Name -match '[\\/]') {
-                    "# $(@($md.Name -split '[\\/]')[-1] -replace '\.ps1')"
-                } else {
-                    "# $($md.Name)"
-                }
+            $helpObject = [Ordered]@{
+                title = $(
+                    if ($md.Name -match '[\\/]') {
+                        "$(@($md.Name -split '[\\/]')[-1] -replace '\.ps1')"
+                    } else {
+                        "$($md.Name)"
+                    }
+                )
+                synopsis = $md.synopsis
+                description = $md.Description.text -join [Environment]::NewLine
+                notes = $md.alertset.alert.text -join [Environment]::NewLine
+                inputs = $md.inputTypes.inputType.type.name -join [Environment]::NewLine
+                outputs = $md.returnValues.returnValue.type.name -join [Environment]::NewLine
+                examples = @(
+                    foreach ($example in $md.examples.example) {
+                        $exampleNumber++
+                        # Combine the code and remarks
+                        $exampleLines = 
+                            @(
+                                $example.Code
+                                foreach ($remark in $example.Remarks.text) {
+                                    if (-not $remark) { continue }
+                                    $remark
+                                }
+                            ) -join ([Environment]::NewLine) -split '(?&gt;\r\n|\n)' # and split into lines
+
+                        # Anything until the first non-comment line is a markdown predicate to the example
+                        $nonCommentLine = $false
+                        $markdownLines = @()
+
+                        # Go thru each line in the example as part of a loop
+                        $codeBlock = @(foreach ($exampleLine in $exampleLines) {
+                            # Any comments until the first uncommentedLine are markdown
+                            if ($exampleLine -match '^\#' -and -not $nonCommentLine) {
+                                $markdownLines += $exampleLine -replace '^\#' -replace '^\s+'
+                            } else {
+                                $nonCommentLine = $true
+                                $exampleLine
+                            }
+                        }) -join [Environment]::NewLine
+                        
+                        # Join all of our markdown lines together                        
+                        $markdownLines -join [Environment]::NewLine
+                        "~~~PowerShell"
+                        $codeBlock
+                        "~~~"
+                    }
+                ) -join [Environment]::NewLine                
+            }
+
+            @(                                
+                "# $($helpObject.title)"
                 
                 if ($md.Synopsis) {
                     "## $($md.Synopsis)"
-                }                
-                $description = $md.Description.text -join [Environment]::NewLine
-                if ($description) {
-                    "### $($description)"
                 }
                 
-                $md.alertset.alert.text -join [Environment]::NewLine
-                
-                foreach ($example in $md.examples.example) {
-                    $exampleNumber++
-                    
-                    # Combine the code and remarks
-                    $exampleLines = 
-                        @(
-                            $example.Code
-                            foreach ($remark in $example.Remarks.text) {
-                                if (-not $remark) { continue }
-                                $remark
-                            }
-                        ) -join ([Environment]::NewLine) -split '(?&gt;\r\n|\n)' # and split into lines
-
-                    # Anything until the first non-comment line is a markdown predicate to the example
-                    $nonCommentLine = $false
-                    $markdownLines = @()
-
-                    # Go thru each line in the example as part of a loop
-                    $codeBlock = @(foreach ($exampleLine in $exampleLines) {
-                        # Any comments until the first uncommentedLine are markdown
-                        if ($exampleLine -match '^\#' -and -not $nonCommentLine) {
-                            $markdownLines += $exampleLine -replace '^\#' -replace '^\s+'
-                        } else {
-                            $nonCommentLine = $true
-                            $exampleLine
-                        }
-                    }) -join [Environment]::NewLine
-                    
-                    # Join all of our markdown lines together                        
-                    $markdownLines -join [Environment]::NewLine
-                    "~~~PowerShell"
-                    $codeBlock
-                    "~~~"
+                if ($helpObject.description) {
+                    "### $($helpObject.description)"
                 }
+
+                if ($helpObject.inputs) {
+                    "### Inputs"
+                    $helpObject.inputs
+                }
+
+                if ($helpObject.outputs) {
+                    "### Outputs"
+                    $helpObject.outputs
+                }
+
+                if ($helpObject.notes) {
+                    if (-not ($helpObject.inputs -or $helpObject.outputs)) {
+                        "### Notes"
+                    }
+                    $helpObject.notes
+                }                                
+                
+                $helpObject.examples
             ) -join [Environment]::NewLine
+
+            $header = $this.Header
+
+            if (-not $header) {
+                $this.Header = $helpObject
+            } elseif ($header -isnot [string]) {
+                foreach ($key in $helpObject.Keys) {
+                    if (-not $header[$key]) {
+                        $header[$key] = $helpObject[$key]
+                    }
+                }
+                $this.Header = $header
+            }
             continue nextInput
         }        
         if ($md -is [ScriptBlock]) {
@@ -673,7 +746,7 @@ if ($currentRows) {
 }
 
 $yamlHeaders = @()
-$allMarkdown = @(foreach ($md in $allMarkdown) {
+$allMarkdown = @(foreach ($md in $allMarkdown) {    
     if ($md -match '^[\-\+]{3}') {
         $null, $frontMatter, $restOfMakdown = $md -split '[\-\+]{3}', 3
         
@@ -1215,13 +1288,15 @@ $noise = '[\\/](?&gt;node_modules)'
 
 $enumOptions = [IO.EnumerationOptions]::new()
 $enumOptions.RecurseSubdirectories = $true
+
 $thisPath = $this.Path
 if ($thisPath) {
     if ([IO.File]::Exists($thisPath)) {
         return ($thisPath -as [IO.FileInfo])
     } elseif ([IO.Directory]::Exists($thisPath)) {
-        return 
-            @(($thisPath -as [IO.DirectoryInfo]).EnumerateFiles('*',$enumOptions)) -notmatch $noise
+        return @(
+            ($thisPath -as [IO.DirectoryInfo]).EnumerateFiles('*',$enumOptions)
+        ) -notmatch $noise
     }
 } else {
     if ($this.Site.root) {        
