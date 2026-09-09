@@ -9,7 +9,8 @@
     All we need to do to Convert Markdown into SVG is convert it to html 
     and put it within a `<foreignObject>`.
 #>
-[OutputType([xml],[string], "image/svg+xml")]
+[OutputType([xml],[string])]
+[OutputType("image/svg+xml")]
 param()
 $svg = @(
     "<svg xmlns='http://www.w3.org/2000/svg'>"
