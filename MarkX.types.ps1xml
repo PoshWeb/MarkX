@@ -2212,7 +2212,8 @@ param()
     '\.ps[dm]?1$' { 'PowerShell' }
     '\.pl(?&gt;\.|$)' { 'Perl'}
     '\.php(?&gt;\.|$)' { 'PHP'}
-    '\.ts(?&gt;\.|$)' { 'typescript' }    
+    '\.ts(?&gt;\.|$)' { 'typescript' }
+    'Skills?\.md' { 'Skill' }
     '^hugo\.' { 'hugo' }
     'astro' { 'astro'}
     'eleventy' { 'eleventy' }
