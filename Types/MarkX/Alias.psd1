@@ -22,4 +22,8 @@
     Links = 'Link'
 
     Files = 'File'
+
+    ConfigFiles = 'ConfigFile'
+
+    ScriptFiles = 'ScriptFile'
 }
