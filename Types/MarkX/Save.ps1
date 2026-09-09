@@ -43,7 +43,7 @@ $savePath =
     # If the markdown already had a path
     # and we did not explicitly provide one
     elseif ($this.Path) {
-        # Keep it where it is.
+        # keep it where it is.
         $this.Path
     }
     # Otherwise, if the post had a title
@@ -81,6 +81,13 @@ $saveSplat = [Ordered]@{
     Path = $savePath
     Force = $true
     ItemType = 'File'
+}
+
+
+if ($this.Path -match '.ps1$' -and 
+    $savePath -eq $this.Path) {
+    # We don't want to overwrite, so return this file    
+    return $this.File
 }
 
 # By default we will save the `.Content`.
