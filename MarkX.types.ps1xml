@@ -24,6 +24,10 @@
         <ReferencedMemberName>CodeBlock</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
+        <Name>ConfigFiles</Name>
+        <ReferencedMemberName>ConfigFile</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
         <Name>DB</Name>
         <ReferencedMemberName>DataSet</ReferencedMemberName>
       </AliasProperty>
@@ -62,6 +66,10 @@
       <AliasProperty>
         <Name>PageType</Name>
         <ReferencedMemberName>SiteType</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>ScriptFiles</Name>
+        <ReferencedMemberName>ScriptFile</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
         <Name>Tables</Name>
@@ -977,6 +985,24 @@ foreach ($element in $this.XML | Select-Xml -XPath //code) {
 }
 
 return $codeByLanguage
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>ConfigFile</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Config Files
+.DESCRIPTION
+    Gets Configuration Files from a MarkX site.
+.NOTES
+    This should be any file with config in it's name, as long as:
+    
+    * It is preceeded by `\`, `/` or `.`.
+    * It is followed by an extension
+#&gt;
+$this.File -match '[\\/\.]config\.[^\.]+$'
+
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
