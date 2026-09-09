@@ -2689,8 +2689,7 @@ if ($header -is [string]) {
 $convertToToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Toml', 'Alias,Cmdlet,Function')
 if (-not $convertToToml) {
     Write-Warning "ConvertTo-Toml not found, setting header as json"
-    $jsonHeader = $header | ConvertTo-Json -Depth 100
-    $this | Add-Member NoteProperty '#JsonHeader' $jsonHeader -Force
+    $jsonHeader = $header | ConvertTo-Json -Depth 100    
     $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
     return
 }
