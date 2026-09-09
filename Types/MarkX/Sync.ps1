@@ -123,12 +123,26 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
                         "~~~"
                     }
                 ) -join [Environment]::NewLine
+                parameters = [Ordered]@{}
                 source = 
                     if ($this -is [ScriptBlock]) {
                         $this.Ast.ToString()
                     } elseif ($this.ScriptBlock) {
                         "$($this.ScriptBlock.Ast.ToString())"
                     }
+            }
+
+            foreach ($param in $md.parameters.parameter) {
+                $helpObject.parameters[$param.name] = [Ordered]@{
+                    name = $param.Name
+                    required = $param.required
+                    description = $param.description.text -join [Environment]::NewLine                      
+                    aliases = $param.aliases
+                    position = $param.position
+                    pipeline = $param.pipelineInput                    
+                    type = $param.parameterValue
+                    wildcard = $param.globbing                    
+                }            
             }
 
             @(                                
@@ -164,15 +178,42 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
                     [Environment]::NewLine
                 }                                
                 
-                [Environment]::NewLine
+                [Environment]::NewLine  
                 $helpObject.examples
                 [Environment]::NewLine
+
+                if ($helpObject.parameters.Count) {
+                    "<details><summary>Parameters</summary>"
+                    [Environment]::NewLine
+
+                    foreach ($parameterName in $helpObject.Parameters.Keys) {
+                        $parameter = $helpObject.Parameters[$parameterName]
+                        "#### $($parameterName)"
+                        [Environment]::NewLine
+                        $parameter.description 
+                        [Environment]::NewLine
+                        $properties = 'required', 'type','position', 
+                            'pipeline',
+                            'wildcard',                            
+                            'aliases'
+                        "|$($properties -join '|')|"
+                        "|$(
+                            (@('-') * ($properties.Count)) -join '|'
+                        )|"
+                        "|$(
+                            $parameter[$properties] -join '|'
+                        )|"
+                        [Environment]::NewLine   
+                    }
+                    
+                    "</details>"
+                }
 
                 if ($helpObject.source -and 
                     -not ($helpObject.source -match '(?m)^(?>~~~|```)PowerShell')
                 ) {
                     "<details><summary>View Source</summary>"
-                    ""                    
+                    [Environment]::NewLine
                     "~~~PowerShell"
                     $helpObject.Source
                     "~~~"
