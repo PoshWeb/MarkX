@@ -5,6 +5,9 @@
     'Markpub.at' = 'Markpub'
     'At.Markpub' = 'Markpub'
 
+    # Page type is akin to SiteType.
+    PageType = 'SiteType'
+
     # Plurals
     FindCodeblocks = 'FindCodeBlock'
     FindReferences = 'FindReference'
