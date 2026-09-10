@@ -1638,7 +1638,15 @@ return @(
       <ScriptProperty>
         <Name>Images</Name>
         <GetScriptBlock>
-                        foreach ($aNode in $this.XML | Select-Xml //img) {
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Images
+.DESCRIPTION
+    Gets `&lt;img&gt;` tags found within Markdown after it has been converted to XML
+.NOTES
+    If the Markdown could not be converted to XML, this will return nothing.
+#&gt;
+foreach ($aNode in $this.XML | Select-Xml //img) {
     if ($aNode.Node.src) {
         $aNode.Node
     }
@@ -1669,15 +1677,33 @@ $this.File -match '[\\/]_includes?[\\/]'
       <ScriptProperty>
         <Name>Input</Name>
         <GetScriptBlock>
-                        return $this.'#input'
+                        &lt;#
+.SYNOPSIS
+    Gets MarkX input
+.DESCRIPTION
+    Gets the input objects for a MarkX object.
+#&gt;
+return $this.'#input'
                     </GetScriptBlock>
         <SetScriptBlock>
-                        param(
+                        &lt;#
+.SYNOPSIS
+    Sets MarkX Input
+.DESCRIPTION
+    Sets the input for a MarkX file or site.
+
+    This will attempt to convert the input to Markdown, 
+    and then will `.Sync()` the object.
+#&gt;
+param(
+# One or more input objects
 [PSObject[]]$InputObject
 )
 
+# Set the `#Input` property
 $this | Add-Member NoteProperty '#Input' $InputObject -Force
 
+# and then Sync.
 $this.Sync()
                     </SetScriptBlock>
       </ScriptProperty>
@@ -1991,7 +2017,19 @@ $markdownData = $this.DataSet
       <ScriptProperty>
         <Name>Link</Name>
         <GetScriptBlock>
-                        foreach ($aNode in $this.XML | Select-Xml //a) {
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Links
+.DESCRIPTION
+    Gets anchor links from within Markdown content.
+.NOTES
+    This will return the links nodes after the Markdown is converted to XML.
+    
+    If XML conversion fails, this will not return any values.
+
+    To find hyperlinks within Markdown, use `.FindHyperlink()`
+#&gt;
+foreach ($aNode in $this.XML | Select-Xml //a) {
     if ($aNode.Node.href) {
         $aNode.Node
     }
@@ -2051,10 +2089,27 @@ return [Regex]::new($liquidPattern)
       <ScriptProperty>
         <Name>Markdown</Name>
         <GetScriptBlock>
-                        return $this.'#Markdown'
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown
+.DESCRIPTION
+    Gets the cached Markdown value for any MarkX object.
+
+    This should be a markdown representation of the object.
+#&gt;
+return $this.'#Markdown'
                     </GetScriptBlock>
         <SetScriptBlock>
-                        param(
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown
+.DESCRIPTION
+    Sets the Markdown on an object.
+.NOTES
+    This will change the `.Input` property, which will then `.Sync()` the markdown.
+#&gt;
+param(
+# Any new or updated markdown content.
 [PSObject[]]$Markdown
 )
 
