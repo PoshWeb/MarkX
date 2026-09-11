@@ -6,11 +6,13 @@
     
     This contains both the Markdown and the YAML Header.
 #>
-@(if ($this.FrontMatter) {
-    "---"
-    $this.FrontMatter
-    "---"
-    $this.Markdown
-} else {
-    $this.Markdown
-}) -join [Environment]::NewLine
+@(    
+    if ($this.FrontMatter) {
+        "---"
+        $this.FrontMatter
+        "---"
+        $this.Markdown
+    } else {
+        $this.Markdown
+    }
+) -join [Environment]::NewLine

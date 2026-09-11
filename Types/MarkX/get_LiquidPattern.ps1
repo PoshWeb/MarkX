@@ -22,7 +22,7 @@ $liquidPattern = @(
         '\{{2}'
         '(?<expression>[^\}]+)'
         '\}{2}'
-    ')'    
+    ')'
 ) -join ''
 
 return [Regex]::new($liquidPattern)

@@ -16,6 +16,7 @@
 .NOTES
     If the markdown cannot be coerced into XML, this should use ConvertFrom-Markdown.
 #>
+param()
 
 $jsHeader = $this.JavaScript
 $header = $this.Header

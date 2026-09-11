@@ -3,15 +3,18 @@
     Sets a MarkX site
 .DESCRIPTION
     Sets site information for a collection of documents.
-
-    If
 .EXAMPLE
 #>
 param(
-# This parameter is untyped.  It may be an array, a string, or a path.
-# If a string is passed, will set a site root or add an additional site root.
-# If a dictionary is passed, will set a site dictionary
-# If a psobject is passed, will set every property on the object.
+<#
+This parameter is untyped.  It may be an array, a string, or a path.
+
+If a string is passed, will set a site root or add an additional site root.
+
+If a dictionary is passed, will set a site dictionary.
+
+If a psobject is passed, will set every property on the object.
+#>
 $Site
 )
 

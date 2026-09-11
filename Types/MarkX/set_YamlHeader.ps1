@@ -1,3 +1,15 @@
+<#
+.SYNOPSIS
+    Sets Markdown Yaml Header
+.DESCRIPTION
+    Sets the Markdown Front Matter as a Yaml header.
+
+    If the value is a `[string]`, will directly set front matter.
+    
+    If the value is not a `[string]`, it will be converted to Yaml.
+
+    If `ConvertTo-Yaml` is not installed, will `ConvertTo-Json`.
+#>
 param($header)
 
 if ($header -is [string]) {
