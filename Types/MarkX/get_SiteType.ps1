@@ -28,7 +28,8 @@ param()
     '\.pl(?>\.|$)' { 'Perl'}
     '\.php(?>\.|$)' { 'PHP'}
     '\.ts(?>\.|$)' { 'typescript' }
-    'Skills?\.md' { 'Skill' }
+    'Skills?\.md' { 'Skills.md' }
+    'Agents?\.md' { 'Agents.md' }
     '^hugo\.' { 'hugo' }
     'astro' { 'astro'}
     'eleventy' { 'eleventy' }
