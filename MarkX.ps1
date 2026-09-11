@@ -52,9 +52,12 @@
 
     All we need to do is add `MarkX` to the `.pstypenames` of an object.
 
-    When we provide a `[IO.FileInfo]` to MarkX, it is still a `[IO.FileInfo]`.
-    When we provide a `[ScriptBlock]` to MarkX, it is still a `[ScriptBlock]`.
-    When we provide a `[Management.Automation.CommandInfo]` to MarkX, it is still a `[Mangement.Automation.CommandInfo]`.
+    This allows the object to maintain it's underlying capabilties.
+
+    * A `[IO.FileInfo]` is still a `[IO.FileInfo]`.
+    * A `[IO.DirectoryInfo]` is a still a `[IO.DirectoryInfo]`.
+    * A `[ScriptBlock]` is still a `[ScriptBlock]`.
+    * A `[Management.Automation.CommandInfo]` is still a `[Mangement.Automation.CommandInfo]`.
 #>
 [Alias('Markdown','Get-Markdown')]
 param()
@@ -76,7 +79,8 @@ $markXProtoType = [PSCustomObject]@{PSTypename='MarkX'}
 
 :nextInput foreach ($in in $AllInput) {
     if (
-        $in -is [Management.Automation.CommandInfo]
+        $in -is [Management.Automation.CommandInfo] -or
+        $in -is [Management.Automation.PSModuleInfo]
     ) {
         $inputObjects += $in
         continue nextInput
@@ -151,7 +155,8 @@ for ($inputNumber = 0; $inputNumber -lt $inputObjects.Count; $inputNumber++) {
     if (
         $inputObject -is [IO.DirectoryInfo] -or
         $inputObject -is [IO.FileInfo] -or 
-        $inputObject -is [Management.Automation.CommandInfo] -or                
+        $inputObject -is [Management.Automation.CommandInfo] -or
+        $inputObject -is [Management.Automation.PSModuleInfo] -or
         $inputObject -is [ScriptBlock] 
     ) {
         $inputObject.pstypenames.insert(0,'MarkX')
