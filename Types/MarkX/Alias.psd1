@@ -23,6 +23,9 @@
 
     Files = 'File'
 
+    Includes = 'Include'
+    '_Includes' = 'Include'
+    
     IncludeFiles = 'IncludeFile'
 
     ConfigFiles = 'ConfigFile'
