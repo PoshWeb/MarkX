@@ -23,7 +23,7 @@
 
     Files = 'File'
 
-    IncludeFiles = 'IncludeFiles'
+    IncludeFiles = 'IncludeFile'
 
     ConfigFiles = 'ConfigFile'
 
