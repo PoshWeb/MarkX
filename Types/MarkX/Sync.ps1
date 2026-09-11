@@ -17,6 +17,7 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             $this |
                 Add-Member NoteProperty '#Path' $md.Fullname -Force
             $this.Site = "$($md.FullName)"
+            $this.Site.Include = $this.Include
             continue nextInput
         }
         # If the markdown was a file
