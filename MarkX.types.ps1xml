@@ -48,6 +48,10 @@
         <ReferencedMemberName>Heading</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
+        <Name>IncludeFiles</Name>
+        <ReferencedMemberName>IncludeFile</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
         <Name>Links</Name>
         <ReferencedMemberName>Link</ReferencedMemberName>
       </AliasProperty>
