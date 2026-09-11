@@ -886,13 +886,31 @@ $this.psobject.Properties.Remove('#DataSet')
       <ScriptMethod>
         <Name>ToString</Name>
         <Script>
-                        if ($args) {
+                        &lt;#
+.SYNOPSIS
+    Stringifies MarkX
+.DESCRIPTION
+    Converts MarkX to string output.
+
+    With no parameters, will output Markdown as HTML.
+
+    Any parameters may be names of properties.
+
+    If more than one parameter is provided,
+    all matching values will be joined with a newline.
+#&gt;
+
+if ($args) {
     $anyOutput = foreach ($arg in $args) {
         $thisArg = $this.$arg
         if ($thisArg) {
             if ($thisArg.XHTML.InnerXML) {
                 "$($thisArg.XHTML.InnerXML)" + [Environment]::NewLine
-            } else {
+            } 
+            elseif ($thisArg -is [xml]) {
+                $thisArg.OuterXML
+            }
+            else {
                 "$thisArg"
             }
         }
@@ -902,14 +920,20 @@ $this.psobject.Properties.Remove('#DataSet')
     }    
 }
 
-if (-not $this.XML.XHTML) { return '' }
-return ("$($this.XML.XHTML.InnerXML)" + [Environment]::NewLine)
+return $this.HTML
                     </Script>
       </ScriptMethod>
       <ScriptMethod>
         <Name>ToTable</Name>
         <Script>
-                        param(
+                        &lt;#
+.SYNOPSIS
+    Converts objects to tables
+.DESCRIPTION
+    Converts objects to markdown tables
+#&gt;
+param(
+# The rows in the table.
 [PSObject[]]
 $Rows
 )
@@ -1082,14 +1106,16 @@ $this.File -match '[\\/\.]config\.[^\.]+$'
     
     This contains both the Markdown and the YAML Header.
 #&gt;
-@(if ($this.FrontMatter) {
-    "---"
-    $this.FrontMatter
-    "---"
-    $this.Markdown
-} else {
-    $this.Markdown
-}) -join [Environment]::NewLine
+@(    
+    if ($this.FrontMatter) {
+        "---"
+        $this.FrontMatter
+        "---"
+        $this.Markdown
+    } else {
+        $this.Markdown
+    }
+) -join [Environment]::NewLine
                     </GetScriptBlock>
         <SetScriptBlock>
                         &lt;#
@@ -1412,7 +1438,19 @@ if ($thisPath) {
       <ScriptProperty>
         <Name>FrontMatter</Name>
         <GetScriptBlock>
-                        return $this.'#FrontMatter'
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Front Matter
+.DESCRIPTION
+    Gets any cached Markdown front matter as a string.
+
+    To get front matter an an object, please use `.Header`
+.LINK
+    MarkX.get_Header
+#&gt;
+[OutputType([string])]
+param()
+return $this.'#FrontMatter'
                     </GetScriptBlock>
         <SetScriptBlock>
                         &lt;#
@@ -1521,7 +1559,15 @@ switch ($this.FrontMatterType) {
 }
                     </GetScriptBlock>
         <SetScriptBlock>
-                        param($header)
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Header
+.DESCRIPTION
+    Sets the Markdown Front Matter from a header object.
+
+    This will overwrite any existing front matter.
+#&gt;
+param($header)
 
 $this.FrontMatter = $header
                     </SetScriptBlock>
@@ -1564,6 +1610,7 @@ $this.XML |
 .NOTES
     If the markdown cannot be coerced into XML, this should use ConvertFrom-Markdown.
 #&gt;
+param()
 
 $jsHeader = $this.JavaScript
 $header = $this.Header
@@ -1671,7 +1718,17 @@ $this.File -match '[\\/]_includes?[\\/]'
       <ScriptProperty>
         <Name>InnerText</Name>
         <GetScriptBlock>
-                        $this.XML.XHTML.InnerText
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Inner Text
+.DESCRIPTION
+    Gets the Inner Text from Markdown.
+
+    This will be the Inner Text of the Markdown, after it is converted to XML.
+.NOTES
+    If the Markdown could not be converted into XML, this will return nothing.
+#&gt;
+$this.XML.XHTML.InnerText
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
@@ -2079,7 +2136,7 @@ $liquidPattern = @(
         '\{{2}'
         '(?&lt;expression&gt;[^\}]+)'
         '\}{2}'
-    ')'    
+    ')'
 ) -join ''
 
 return [Regex]::new($liquidPattern)
@@ -2352,7 +2409,7 @@ foreach ($key in $page.Keys) {
 .DESCRIPTION
     Gets the path associated with a Markdown file.
 #&gt;
-return $this.'#Path'
+return $this.'#Path'    
                     </GetScriptBlock>
         <SetScriptBlock>
                         &lt;#
@@ -2435,15 +2492,18 @@ return $this.'#Site'
     Sets a MarkX site
 .DESCRIPTION
     Sets site information for a collection of documents.
-
-    If
 .EXAMPLE
 #&gt;
 param(
-# This parameter is untyped.  It may be an array, a string, or a path.
-# If a string is passed, will set a site root or add an additional site root.
-# If a dictionary is passed, will set a site dictionary
-# If a psobject is passed, will set every property on the object.
+&lt;#
+This parameter is untyped.  It may be an array, a string, or a path.
+
+If a string is passed, will set a site root or add an additional site root.
+
+If a dictionary is passed, will set a site dictionary.
+
+If a psobject is passed, will set every property on the object.
+#&gt;
 $Site
 )
 
@@ -2953,7 +3013,19 @@ switch ($this.FrontMatterType) {
 return
                     </GetScriptBlock>
         <SetScriptBlock>
-                        param($header)
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Yaml Header
+.DESCRIPTION
+    Sets the Markdown Front Matter as a Yaml header.
+
+    If the value is a `[string]`, will directly set front matter.
+    
+    If the value is not a `[string]`, it will be converted to Yaml.
+
+    If `ConvertTo-Yaml` is not installed, will `ConvertTo-Json`.
+#&gt;
+param($header)
 
 if ($header -is [string]) {
     $this | Add-Member NoteProperty '#FrontMatter' $header -Force
