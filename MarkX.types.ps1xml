@@ -565,6 +565,45 @@ $markXProtoType = [PSCustomObject]@{PSTypeName='MarkX'}
 
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
     if ($md -isnot [string]) {
+        if ($md -is [PSModuleInfo]) {
+            # Since we have already decorated this type,
+            # we need to get the underlying module path with reflection
+            $modulePath = $md.GetType().GetProperty("Path").GetValue($md)                        
+            if (-not $this.Header) {
+                $this.Header = [Ordered]@{
+                    title = $md.name
+                    description = $md.description
+                    author = $md.author
+                    copyright = $md.copyright
+                    companyName = $md.companyName
+                    version = $md.version
+                    guid = $md.guid
+                    licenseUri = $md.licenseUri
+                    releaseNotes = $md.releaseNotes
+                    projectUri = $md.projectUri
+                    privateData = $md.privateData
+                }
+            }
+                        
+            @(                    
+                "# $($md.name) @ $($md.version)"
+                [Environment]::newline
+                "## $($md.description)"
+
+                if ($md.privateData.PSData.PSIntro) {
+                    [Environment]::newline
+                    $md.PrivateData.PSData.PSIntro
+                }
+                elseif ($md.privateData.PSIntro) {
+                    [Environment]::newline
+                    $md.PrivateData.PSIntro
+                }
+                
+            )
+
+            $md = ($modulePath | Split-Path) -as [IO.DirectoryInfo]
+        }
+
         if ($md -is [IO.DirectoryInfo]) {
             $this |
                 Add-Member NoteProperty '#Path' $md.Fullname -Force
@@ -572,6 +611,7 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             $this.Site.includes = $this.Include
             continue nextInput
         }
+        
         # If the markdown was a file
         if ($md -is [IO.FileInfo] -and 
             # and it had a markdown extension
