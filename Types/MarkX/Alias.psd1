@@ -32,5 +32,6 @@
 
     ScriptFiles = 'ScriptFile'
 
+    Requires = 'Require'
     Requirements = 'Requirement'
 }
