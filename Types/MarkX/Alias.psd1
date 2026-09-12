@@ -31,4 +31,6 @@
     ConfigFiles = 'ConfigFile'
 
     ScriptFiles = 'ScriptFile'
+
+    Requirements = 'Requirement'
 }
