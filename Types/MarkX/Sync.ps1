@@ -9,6 +9,12 @@
 #>
 $currentRows = @()
 
+$allInput = @($input)
+if ($allInput -and -not $this) {
+    $this = [PSCustomObject]@{PSTypeName='MarkX'}
+    $this | Add-Member NoteProperty '#Input' $allInput -Force
+}
+
 $markXProtoType = [PSCustomObject]@{PSTypeName='MarkX'}
 
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
@@ -45,8 +51,7 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
                 elseif ($md.privateData.PSIntro) {
                     [Environment]::newline
                     $md.PrivateData.PSIntro
-                }
-                
+                }                
             )
 
             $md = ($modulePath | Split-Path) -as [IO.DirectoryInfo]
@@ -311,11 +316,11 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
         $md = Get-Content -Raw $md
     }
 
-    $yamlheader = ''
+    $frontMatter = ''
     if ($md -match '^---') {
-        $null, $yamlheader, $md = $md -split '---', 3
-        if ($yamlheader) {
-            $this | Add-Member NoteProperty '#YamlHeader' $yamlheader -Force
+        $null, $frontMatter, $md = $md -split '---', 3
+        if ($frontMatter) {
+            $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
         }
     }
 
@@ -381,3 +386,4 @@ $this |
 if (-not $this.'#XML') { return }
 
 $this.psobject.Properties.Remove('#DataSet')
+return $this
