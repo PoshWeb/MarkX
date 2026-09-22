@@ -11,26 +11,32 @@
 #>
 if (-not $this.'#FrontMatter') { return }
 
-switch ($this.FrontMatterType) {
-    yaml {
-        $convertFromYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertFrom-Yaml', 'Alias,Cmdlet,Function')
-        if (-not $convertFromYaml) {
-            throw "Cannot get yaml header without ConvertFrom-Yaml"
+try {
+    switch ($this.FrontMatterType) {
+        yaml {
+            $convertFromYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertFrom-Yaml', 'Alias,Cmdlet,Function')
+            if (-not $convertFromYaml) {
+                throw "Cannot get yaml header without ConvertFrom-Yaml"
+            }
+            return ($this.'#FrontMatter' | & $convertFromYaml)
         }
-        return ($this.'#FrontMatter' | & $convertFromYaml)
-    }
-    json {
-        return ($this.'#FrontMatter' | ConvertFrom-Json -AsHashtable)
-    }
-    toml {
-        $convertFromToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertFrom-Toml', 'Alias,Cmdlet,Function')
-        if (-not $convertFromToml) {
-            throw "Cannot get toml header without ConvertFrom-Toml"            
+        json {
+            return ($this.'#FrontMatter' | ConvertFrom-Json -AsHashtable)
         }
+        toml {
+            $convertFromToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertFrom-Toml', 'Alias,Cmdlet,Function')
+            if (-not $convertFromToml) {
+                throw "Cannot get toml header without ConvertFrom-Toml"            
+            }
 
-        return ($this.'#FrontMatter' | & $convertFromToml)
+            return ($this.'#FrontMatter' | & $convertFromToml)
+        }
+        default {
+            return $this.'#FrontMatter'
+        }
     }
-    default {
-        return $this.'#FrontMatter'
-    }
+} catch {
+    $errorRecord = $_
+    return $errorRecord
+    # Write-Warning "Could not get header: $_"
 }
