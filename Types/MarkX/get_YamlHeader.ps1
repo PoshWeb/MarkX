@@ -18,9 +18,10 @@ switch ($this.FrontMatterType) {
     }
     default {
         $header = $this.Header
-        if ($header -is [string]){
+        if ($header -is [string] -or $header -is [Management.Automation.ErrorRecord]){
             return $header
         }
+        
         $convertToYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Yaml', 'Alias,Cmdlet,Function')
         if (-not $convertToYaml) {
             Write-Warning "ConvertTo-Yaml not found, returning header as json"
@@ -37,10 +38,14 @@ switch ($this.FrontMatterType) {
             Write-Verbose "Could not set depth:  Please use YaYaml: $_"    
         }
         finally {
-            $header | & $convertToYaml @convertParameters
-            if ($toYaml -is [string]) {
-                $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
-            }
+            try {
+                $header | & $convertToYaml @convertParameters
+                if ($toYaml -is [string]) {
+                    $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
+                }
+            } catch {
+                Write-Warning "Conversion failed: $_"
+            }                        
         }        
     }    
 }

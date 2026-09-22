@@ -14,10 +14,9 @@ switch ($this.FrontMatterType) {
     }
     default {        
         $header = $this.Header
-        if ($header -isnot [string]) {
-            return $header | ConvertTo-Json -Depth 100
-        } else {
+        if ($header -is [string] -or $header -is [Management.Automation.ErrorRecord]) {
             return $header
-        }         
+        }        
+        return $header | ConvertTo-Json -Depth 100                 
     }    
 }

@@ -19,7 +19,7 @@ switch ($this.FrontMatterType) {
     default {        
         $header = $this.Header
 
-        if ($header -is [string]) {
+        if ($header -is [string] -or $header -is [Management.Automation.ErrorRecord]){
             return $header
         }
 
