@@ -26,7 +26,7 @@ foreach ($file in $this.File -match '\.ps1$') {
     # If they have not yet been cached,
     if (-not $this.'#Cache'[$file.FullName]) {
         # cache them.
-        $notCached.Enqueue($file.FullName)
+        $notCached.Enqueue($file)
     } else {
         $this.'#Cache'[$file.FullName]
     }
@@ -39,7 +39,11 @@ foreach ($markx in $notCached.ToArray() | markx) {
         }
         $this.'#Cache'[$markX.Path] = $markx
         $this.'#Cache'[$markX.Path]
-    } else {
-        $null = $null
+    } elseif ($markx.Source) {
+        if ($this.'#site') {
+            $markx.Site = $this.'#site'
+        }
+        $this.'#Cache'[$markx.Source] = $markx
+        $this.'#Cache'[$markx.Source]
     }
 }

@@ -4,4 +4,10 @@
 .DESCRIPTION
     Gets the path associated with a Markdown file.
 #>
-return $this.'#Path'    
+if ($this.'#Path') {
+    return $this.'#Path'
+}
+
+if ($this -is [Management.Automation.ExternalScriptInfo]) {
+    return $this.Source
+}

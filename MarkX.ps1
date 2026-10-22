@@ -58,6 +58,7 @@
     * A `[IO.DirectoryInfo]` is a still a `[IO.DirectoryInfo]`.
     * A `[ScriptBlock]` is still a `[ScriptBlock]`.
     * A `[Management.Automation.CommandInfo]` is still a `[Mangement.Automation.CommandInfo]`.
+    * A `[Management.Automation.PSModuleInfo]` is still a `[Mangement.Automation.PSModuleInfo]`.
 #>
 [Alias('Markdown','Get-Markdown')]
 param()
@@ -159,6 +160,14 @@ for ($inputNumber = 0; $inputNumber -lt $inputObjects.Count; $inputNumber++) {
         $inputObject -is [Management.Automation.PSModuleInfo] -or
         $inputObject -is [ScriptBlock] 
     ) {
+        if ($inputObject -is [IO.FileInfo] -and 
+            $inputObject.Extension -eq '.ps1') {
+            $inputObject = $ExecutionContext.SessionState.InvokeCommand.GetCommand($inputObject.FullName,'ExternalScript')            
+        }
+
+        if ($inputObject -is [Management.Automation.ExternalScriptInfo] -and -not $inputObject.ScriptBlock) {
+            continue
+        }
         $inputObject.pstypenames.insert(0,'MarkX')
         $inputObject.Input = $inputObject
         $inputObject |            
