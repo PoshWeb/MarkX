@@ -17,7 +17,7 @@ if (-not $header) {
     return
 }
 $header.date = $Date
-$this.YamlHeader = $header
+$this.Header = $header
 
 # If page data has been initialized,
 if ($this.'#Page' -is [Collections.IDictionary]) {
