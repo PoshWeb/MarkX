@@ -15,7 +15,7 @@ RootModule = 'MarkX.psm1'
 ModuleVersion = '0.1.4'
 
 # Supported PSEditions
-CompatiblePSEditions = @('Core')
+CompatiblePSEditions = @()
 
 # ID used to uniquely identify this module
 GUID = '1d54ba10-9f15-4f1f-bf5b-8b2fff02927b'
