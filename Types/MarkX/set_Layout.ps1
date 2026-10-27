@@ -34,7 +34,7 @@ else {
         throw "Header is a string, cannot set layout"        
     }
 
-    $this.Header = $header    
+    $this.Header = $header
 }
 
 # If page data has been initialized,
