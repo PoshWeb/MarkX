@@ -16,35 +16,691 @@
         </Members>
       </MemberSet>
       <AliasProperty>
+        <Name>_Includes</Name>
+        <ReferencedMemberName>Include</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>At.Markpub</Name>
+        <ReferencedMemberName>Markpub</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>CodeBlocks</Name>
+        <ReferencedMemberName>CodeBlock</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>ConfigFiles</Name>
+        <ReferencedMemberName>ConfigFile</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
         <Name>DB</Name>
         <ReferencedMemberName>DataSet</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
-        <Name>Heading</Name>
-        <ReferencedMemberName>Headings</ReferencedMemberName>
+        <Name>Files</Name>
+        <ReferencedMemberName>File</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
-        <Name>Link</Name>
-        <ReferencedMemberName>Links</ReferencedMemberName>
+        <Name>FindCodeblocks</Name>
+        <ReferencedMemberName>FindCodeBlock</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>FindReferences</Name>
+        <ReferencedMemberName>FindReference</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>Headings</Name>
+        <ReferencedMemberName>Heading</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>IncludeFiles</Name>
+        <ReferencedMemberName>IncludeFile</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>Includes</Name>
+        <ReferencedMemberName>Include</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>Links</Name>
+        <ReferencedMemberName>Link</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>MarkdownContentTypes</Name>
+        <ReferencedMemberName>MarkdownContentTypes</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>MarkdownExtensions</Name>
+        <ReferencedMemberName>MarkdownExtension</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>Markpub.at</Name>
+        <ReferencedMemberName>Markpub</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>PageType</Name>
+        <ReferencedMemberName>SiteType</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>Requirements</Name>
+        <ReferencedMemberName>Requirement</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>Requires</Name>
+        <ReferencedMemberName>Require</ReferencedMemberName>
+      </AliasProperty>
+      <AliasProperty>
+        <Name>ScriptFiles</Name>
+        <ReferencedMemberName>ScriptFile</ReferencedMemberName>
       </AliasProperty>
       <AliasProperty>
         <Name>Tables</Name>
         <ReferencedMemberName>Table</ReferencedMemberName>
       </AliasProperty>
+      <AliasProperty>
+        <Name>TOC</Name>
+        <ReferencedMemberName>TableOfContents</ReferencedMemberName>
+      </AliasProperty>
+      <ScriptMethod>
+        <Name>CrossReference</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Cross Reference Markdown
+.DESCRIPTION
+    Cross References references to other topics.
+#&gt;
+
+param(
+# A dictionary of topics to reference.
+# The keys are the strings we will search for.
+# The values may be anything, but should probably be titles or changelogs
+[Alias('ReferenceTopics')]
+[Collections.IDictionary]
+$TopicReference
+)
+
+if (-not $TopicReference.Count) {
+    throw "Nothing to cross reference"
+}
+
+# Get our content as a string
+$content = "$($this.Content)"
+
+# We do not want to cross reference within certain ranges
+$avoidRange = @()
+# For example, anything within a code block should not be cross-referenced
+$avoidRange += @(foreach ($cb in $this.FindCodeBlock()) {
+    $cb.Index..($cb.Index+$cb.Length)
+})
+
+# and anything within hyperlinks should also not be cross referenced.
+$avoidRange += @(foreach ($hyperlink in $this.FindHyperLink()) {
+    $hyperlink.Index..$($hyperlink.Index + $hyperlink.Length)
+})
+
+# Now we just need to reconstruct our string,
+$index   = 0 # starting at index 0.
+$newText = @(
+# We find all references
+foreach ($ref in $this.FindReference($TopicReference)) {
+    # and skip any in avoided ranges.
+    if ($ref.Index -in $avoidRange) { continue }    
+    $refStart = $ref.Index
+    # Then we get any content between this and the last reference.
+    if ($refStart -gt $index) {
+        $content.Substring($index, $refStart - $index)
+    }
+    # and then we replace our reference.
+    "[$($ref)]($($topicReference["$ref"]))"
+    # and update our index.
+    $index = $ref.Index + $ref.Length
+}
+
+# If there was any remaining content after the last match
+if ($index -lt $content.Length) {
+    # include it.
+    $content.Substring($index)
+}
+) -join '' # Join all of our content by '' and we have reconstructed the string
+
+# Which we will reassign to the content
+$this.Content = $newText
+# and then return this.
+return $this
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Find</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Markdown Find
+.DESCRIPTION
+    Finds patterns within Markdown content.
+
+    This will search the combined front matter and markdown using a regular expression.
+.NOTES
+    If the pattern provided is not a regular expression, 
+    and can be cast to one,
+    it will be treated as a regular expression with the options:
+
+    * IgnoreCase
+    * IgnorePatternwhitespace
+
+    If the pattern cannot be cast to a regular expression,
+    it will be stringified and escaped.
+#&gt;
+param(
+# The pattern
+$Pattern
+)
+
+# If the pattern is a pattern
+if ($Pattern -is [Regex]) {
+    # just match
+    return $Pattern.Matches("$($this.Content)")
+} elseif (    
+    # If it can be cast,
+    $Pattern -is [string] -and $pattern -as [regex]
+) {
+    # create it and match
+    return [Regex]::new($Pattern,'IgnoreCase,IgnorePatternWhitespace').Matches(
+        "$($this.Content)"
+    )    
+} elseif (
+    # If it can be stringified
+    $pattern.ToString
+) {
+    # Stringify it.
+    [Regex]::new([Regex]::Escape($pattern.ToString()), 'IgnoreCase').Matches(
+            "$($this.Content)"
+    )
+}
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>FindCodeBlock</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Find Markdown Code blocks
+.DESCRIPTION
+    Finds code fence blocks within Markdown.
+#&gt;
+param()
+[Regex]::new(
+    '
+    (?&gt;
+        (?&lt;FenceChar&gt;[`\~]){3}    # Code fences start with tildas or backticks, repeated at least 3 times
+    (?&lt;Language&gt;                  # Match a specific language
+    .+?(?=[\r\n])
+    )?
+    [\s-[\r\n]]{0,}               # Match but do not capture initial whitespace.
+    (?&lt;Code&gt;                      # Capture the &lt;Code&gt; block
+        (?:.|\s){0,}?             # This is anything until
+        (?=\z|\k&lt;FenceChar&gt;{3})   # the end of the string or the same matching fence chars
+    )
+    (?&gt;\z|\k&lt;FenceChar&gt;{3})
+    )
+    ', 
+    'IgnoreCase,IgnorePatternWhitespace,Singleline'
+).Matches("$($this.Content)")
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>FindHyperlink</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Matches a Markdown Link
+.DESCRIPTION
+    Matches a Markdown Link.  Can customize the link text and link url.
+.NOTES
+    This only matches simple markdown links.  It does not currently match links with titles.
+#&gt;
+param(
+# The text of the link.
+$LinkText  = '[^\]\r\n]+',
+
+# The link URI.
+[Alias('LinkUrl')]
+$LinkUri   = '[^\)\r\n]+'
+)
+
+
+$this.Find(
+[Regex]::new(@"
+(?&lt;IsImage&gt;\!)?    # If there is an exclamation point, then it is an image link
+\[                 # Markdown links start with a bracket
+(?&lt;Text&gt;$LinkText)
+\]                 # anything until the end bracket is the link text.
+\(                 # The link uri is within parenthesis
+(?&lt;Uri&gt;$LinkUri)
+\)                 # anything until the closing parenthesis is the link uri.
+"@, 'IgnoreCase, IgnorePatternWhitespace')
+)
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>FindReference</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Find Markdown References
+.DESCRIPTION
+    Finds References to a dictionary of words within markdown.
+
+    This allows us to find keyword mentions within a file, 
+    and can be used to cross-reference content.
+#&gt;
+param(
+# A dictionary of topics to reference.
+# The keys are the strings we will search for.
+# The values may be anything, but should probably be titles or changelogs
+[Alias('ReferenceTopics')]
+[Collections.IDictionary]
+$TopicReference
+)
+
+$skipReference = @()
+$header = $this.Header
+# Front matter may indicate we want to skip specific cross references
+$skipReference += @(
+    if ($header.SkipReference) { $header.SkipReference}
+    elseif ($header.SkipReferences) { $header.SkipReferences }
+    elseif ($header.NoReference) { $header.NoReference }
+    elseif ($header.NoReferences) { $header.NoReferences}
+)
+
+# Sort all potential reference by length and then alphabetically
+# (this lets us match the longest potential reference first)
+$sortedKeys = $topicReference.Keys | Sort-Object Length, { $_ } -Descending
+
+# We only want to match references that follow
+# the start anchor or any whitespace, end tag, quote, underscore, or open parenthesis
+$LookBehind = "(?&lt;=(?&gt;^|[\s\&gt;'`"_\(]))" 
+
+# We only want to match references that preceed
+# the end anchor or any whitespace, end tag, quote, underscore, or close parenthesis
+$LookAhead  = "(?=(?&gt;$|[\s\&gt;'`"_\.,\)]))"
+
+$NotAfter = '(?&lt;!\#{1,6}[\s\S-[\r\n]])'
+
+$referencePattern = [Regex]::new("${LookBehind}${NotAfter}(?&gt;$(
+    @(foreach ($k in $sortedKeys) {
+        [Regex]::Escape($k) -replace '\\\s', '[\s\-_]'
+    }) -join '|'
+))$LookAhead", 'Multiline,IgnoreCase')
+
+# We will match any references within the markdown
+foreach ($match in $referencePattern.Matches("$($this.markdown)")) {
+    $topicAlias = $match -replace '[\s\-_]',' '
+    if ($skipReference -and (
+        $skipReference -contains $topicAlias -or 
+        $skipReference -contains $topicReference["$topicAlias"].TopicName)
+    ) {
+        continue
+    }
+    
+    $match
+}
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Replace</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Markdown Replace
+.DESCRIPTION
+    Replace patterns within Markdown content.
+
+    This will search the combined front matter and markdown using a regular expression.
+#&gt;
+param(
+&lt;#
+The pattern.
+
+If the pattern provided is not a regular expression, 
+and can be cast to one,
+will be treated as a regular expression with the options:
+
+* IgnoreCase
+* IgnorePatternwhitespace
+
+If the pattern cannot be cast to a regular expression,
+it will be stringified and escaped.
+#&gt;
+$Pattern,
+
+# The replacement.
+# This can be a `[ScriptBlock]` or a 
+# `[Text.RegularExpressions.MatchEvaluator]`
+$Replacement
+)
+
+$Pattern = 
+    # If the pattern is a pattern
+    if ($Pattern -is [Regex]) {
+        # just match
+        $Pattern.Matches("$($this.Content)")
+    } elseif (    
+        # If it can be cast,
+        $Pattern -is [string] -and $pattern -as [regex]
+    ) {
+        # create it and match
+        [Regex]::new($Pattern,'IgnoreCase,IgnorePatternWhitespace', '00:00:01')
+    } elseif (
+        # If it can be stringified
+        $pattern.ToString
+    ) {
+        # Stringify it.
+        [Regex]::new([Regex]::Escape($pattern.ToString()))
+    }
+
+
+# If the replacement was a lambda
+$replaced = if (    
+    $Replacement -is [ScriptBlock] -or 
+    $Replacement -is [Text.RegularExpressions.MatchEvaluator]
+) {
+    # call it directly
+    $Pattern.Replace("$($this.Content)",$Replacement)
+} else {
+    # Otherwise, stringify the replacement
+    $Pattern.Replace("$($this.Content)", "$Replacement")
+}
+
+$this.Content = $replaced
+
+# Return ourself so we can chain operations.
+return $this
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Require</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Require modules
+.DESCRIPTION
+    Installs and Imports any required modules.
+#&gt;
+[OutputType([Management.Automation.PSModuleInfo])]
+param()
+
+# If this had no requirements, this does nothing.
+if (-not $this.Requirement) {return}
+
+# Collect any required modules
+$requiredModules = @($this.Requirement.RequiredModules)
+
+# Prepare our progress
+$progress = @{
+    id = Get-Random
+    Activity = "Installing Requirements"
+}
+# If the script has requirements, walk over each of them.
+:nextRequirement foreach ($requirement in $requiredModules) {    
+    # Check if they are loaded
+    $requiredModule = Get-Module -ErrorAction Ignore -Name $requirement.Name
+    # If they are
+    if ($requiredModule) {
+        # output them
+        $requiredModule
+        continue nextRequirement # and continue to the next requirement
+    }
+
+    $progress.Status ="Importing Requirement $($requirement.Name) for $($this.Path)"
+    Write-Progress @progress    
+        
+    $requiredModule = Import-Module $requiredModule -Force -PassThru -ErrorAction Ignore
+
+    if ($requiredModule) {
+        $requiredModule
+        continue nextRequirement
+    }
+
+    # If that did not work,
+    $progress.Status ="Installing Requirement $($requirement.Name)"
+    Write-Progress @progress
+        
+    Install-Module $requirement.Name -Scope CurrentUser -Force
+
+    Import-Module $requirement.Name -Global -Force -PassThru    
+}
+
+$progress.Completed = $true
+Write-Progress @progress
+                    </Script>
+      </ScriptMethod>
+      <ScriptMethod>
+        <Name>Save</Name>
+        <Script>
+                        &lt;#
+.SYNOPSIS
+    Saves Markdown
+.DESCRIPTION
+    Saves Markdown content into a new file.
+#&gt;
+param(
+# The path used to save the content
+[string]
+$Path,
+
+# Any options used to determine how the content is saved.
+[Alias('Options')]
+[Collections.IDictionary]
+$Option = [Ordered]@{}
+)
+
+# Determine the save path
+$savePath =
+    if ($path) {
+        # If a path was passed, it can either be a real path
+        # or, if a date is present
+        if ($this.Date) {
+            # `ymd`, `y-m-d` or `year-month-day` a year month day post                        
+            if ($path -in 'ymd', 'y-m-d', 'Year-Month-Day') {
+                "$($this.Date.ToString('yyyy-MM-dd'))$(
+                    if ($this.Title) {
+                        "-$($this.Title -replace '[\p{P}\p{S}]', '-')"
+                    }
+                ).md"
+            } elseif ($path -in 'y/m/d', 'Year/Month/Day') {
+                "$($this.Date.ToString('yyyy/MM/dd'))$(
+                    if ($this.Title) {
+                        "/$($this.Title -replace '[\p{P}\p{S}]', '-')"
+                    }
+                ).md"                
+            }
+        } else {
+            # Otherwise, use the specified path.
+            $path
+        }
+    }
+    # If the markdown already had a path
+    # and we did not explicitly provide one
+    elseif ($this.Path) {
+        # keep it where it is.
+        $this.Path
+    }
+    # Otherwise, if the post had a title
+    elseif ($this.Title) {
+        # and a date
+        if ($this.Date) {
+            "$(
+                # include the date in yyyy/MM/dd format
+                $this.Date.ToString('yyyy/MM/dd')
+            )/$(
+                # Then include the title.
+                $this.Title -replace '[\p{P}\p{S}]', '-'
+            ).md"
+        } else {
+            # Otherwise, just include the title.
+            "$($this.Title -replace '[\p{P}\p{S}]', '-').md"
+        }        
+    }
+    # If the post only had a date,
+    elseif ($this.Date) {
+        # Stringify the time, including seconds.
+        "$($this.Date.ToString('s') -replace ':','_').md"
+    }
+    else {
+        # If no path information was provided,
+        # no date or title was found on the post,
+        # then we will autosave to the current time,
+        # (including milliseconds)
+        "$([DateTime]::Now.ToString('o') -replace ':','_').md"
+    }
+
+
+# Prepare our parameters for New-Item
+$saveSplat = [Ordered]@{
+    Path = $savePath
+    Force = $true
+    ItemType = 'File'
+}
+
+
+if ($this.Path -match '.ps1$' -and 
+    $savePath -eq $this.Path) {
+    # We don't want to overwrite, so return this file    
+    return $this.File
+}
+
+# By default we will save the `.Content`.
+$saveSplat.Value = "$($this.Content)"
+
+# If `.OnlyMarkdown` or `.MarkdownOnly` were in options
+if ($Option.OnlyMarkdown -or $Option.MarkdownOnly) {
+    # then we will only save the markdown portion
+    $saveSplat.Value = "$($this.Markdown)"
+}
+
+# If the path is a specific extension,
+# we may want to save it a specific way. 
+switch -regex ($savePath) {
+    # If it is json
+    '\.json$' {
+        # we will save it as [MarkPub](https://markpub.at).
+        $saveSplat.Value = "$($this.JSON)"
+    }
+    # If it is `.html`
+    '\.html?$' {
+        # we will always save the `html` property
+        $saveSplat.Value = "$(
+            $this.Html
+        )"
+    }
+    # If it is `.svg`
+    # create an element with a `&lt;foreignObject&gt;`  inside of it.    
+    '\.svg$' {
+        $svg = $this.SVG
+        $saveSplat.Value = @(
+            if ($svg.OuterXml){
+                $svg.OuterXml
+            } else {
+                $svg
+            }
+        ) -join [Environment]::NewLine
+    }
+}
+
+if ($Option.WhatIf -or 
+    $option.PassThru -or 
+    $WhatIfPreference) {
+    return $saveSplat
+}
+
+New-Item @saveSplat
+                    </Script>
+      </ScriptMethod>
       <ScriptMethod>
         <Name>Sync</Name>
         <Script>
-                        $currentRows = @()
+                        &lt;#
+.SYNOPSIS
+    Synchronizes Mark Data
+.DESCRIPTION
+    Synchronizes a MarkX input into a parsed MarkX file.
+.NOTES
+    This will read markdown from files, convert them from markdown,
+    and attempt to cast the output to XHTML so it can be queried.    
+#&gt;
+$currentRows = @()
+
+$allInput = @($input)
+if ($allInput -and -not $this) {
+    $this = [PSCustomObject]@{PSTypeName='MarkX'}
+    $this | Add-Member NoteProperty '#Input' $allInput -Force
+}
+
+$markXProtoType = [PSCustomObject]@{PSTypeName='MarkX'}
 
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
     if ($md -isnot [string]) {
+        if ($md -is [PSModuleInfo]) {
+            # Since we have already decorated this type,
+            # we need to get the underlying module path with reflection
+            $modulePath = $md.GetType().GetProperty("Path").GetValue($md)                        
+            if (-not $this.Header) {
+                $this.Header = [Ordered]@{
+                    title = $md.name
+                    description = $md.description
+                    author = $md.author
+                    copyright = $md.copyright
+                    companyName = $md.companyName
+                    version = $md.version
+                    guid = $md.guid
+                    licenseUri = $md.licenseUri
+                    releaseNotes = $md.releaseNotes
+                    projectUri = $md.projectUri
+                    privateData = $md.privateData
+                }
+            }
+                        
+            @(                    
+                "# $($md.name) @ $($md.version)"
+                [Environment]::newline
+                "## $($md.description)"
+
+                if ($md.privateData.PSData.PSIntro) {
+                    [Environment]::newline
+                    $md.PrivateData.PSData.PSIntro
+                }
+                elseif ($md.privateData.PSIntro) {
+                    [Environment]::newline
+                    $md.PrivateData.PSIntro
+                }                
+            )
+
+            $md = ($modulePath | Split-Path) -as [IO.DirectoryInfo]
+        }
+
+        if ($md -is [IO.DirectoryInfo]) {
+            $this |
+                Add-Member NoteProperty '#Path' $md.Fullname -Force
+            $this.Site = "$($md.FullName)"
+            $this.Site.includes = $this.Include
+            continue nextInput
+        }
+        
         # If the markdown was a file
         if ($md -is [IO.FileInfo] -and 
-            # and it had the extension .md or markdown
-            $md.Extension -in '.md', '.markdown') {
-            $md = Get-Content -LiteralPath $md.Fullname -Raw 
+            # and it had a markdown extension
+            $md.Extension -in $markXProtoType.MarkdownExtension) {
+
+            $this |
+                Add-Member NoteProperty '#Path' $md.Fullname -Force
+
+            $md = Get-Content -LiteralPath $md.Fullname -Raw
             $md
             continue
+        }
+
+        if ($md -is [ScriptBlock]) {
+            ${function:Lambda λ} = $md
+            $md = $ExecutionContext.SessionState.InvokeCommand.GetCommand('Lambda λ', 'Function')
         }
         
         if ($md -is [Management.Automation.CommandInfo]) {
@@ -54,68 +710,196 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             ) {
                 Get-Help -Name $md.Name
             } elseif ($md -is [Management.Automation.ExternalScriptInfo]) {
+                $this | Add-Member NoteProperty '#Path' "$($md.Source)" -Force
                 Get-Help -Name $md.Source
             } else {
                 continue nextInput
+            }                        
+
+            $thisScriptBlock = 
+                if ($this -is [ScriptBlock]) {
+                    $this
+                } elseif ($this.ScriptBlock) {
+                    $this.ScriptBlock
+                }
+
+            if ($thisScriptBlock) {    
+                $frontMatter = @(foreach ($attr in $thisScriptBlock.Attributes) {
+                    if ($attr -is [Reflection.AssemblyMetaDataAttribute] -and
+                        $attr.Key -match 'Front[\s\p{P}]{0,}Matter') {
+                        $attr.Value
+                    }   
+                })
+                if ($frontMatter) {
+                    $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
+                }
             }
+
             if ($cmdHelp) {
-                $md = $cmdHelp                
+                $md = $cmdHelp
             }
         }
 
         if ($md.pstypenames -match 'HelpInfo') {
-            @(
-                if ($md.Name -match '[\\/]') {
-                    "# $(@($md.Name -split '[\\/]')[-1] -replace '\.ps1')"
-                } else {
-                    "# $($md.Name)"
-                }
+            $helpObject = [Ordered]@{
+                title = $(
+                    if ($md.Name -match '[\\/]') {
+                        "$(@($md.Name -split '[\\/]')[-1] -replace '\.ps1')"
+                    } else {
+                        "$($md.Name)"
+                    }
+                )
+                synopsis = $md.synopsis
+                description = $md.Description.text -join [Environment]::NewLine
+                notes = $md.alertset.alert.text -join [Environment]::NewLine
+                inputs = $md.inputTypes.inputType.type.name -join [Environment]::NewLine
+                outputs = $md.returnValues.returnValue.type.name -join [Environment]::NewLine
+                examples = @(
+                    foreach ($example in $md.examples.example) {
+                        $exampleNumber++
+                        # Combine the code and remarks
+                        $exampleLines = 
+                            @(
+                                $example.Code
+                                foreach ($remark in $example.Remarks.text) {
+                                    if (-not $remark) { continue }
+                                    $remark
+                                }
+                            ) -join ([Environment]::NewLine) -split '(?&gt;\r\n|\n)' # and split into lines
+
+                        # Anything until the first non-comment line is a markdown predicate to the example
+                        $nonCommentLine = $false
+                        $markdownLines = @()
+
+                        # Go thru each line in the example as part of a loop
+                        $codeBlock = @(foreach ($exampleLine in $exampleLines) {
+                            # Any comments until the first uncommentedLine are markdown
+                            if ($exampleLine -match '^\#' -and -not $nonCommentLine) {
+                                $markdownLines += $exampleLine -replace '^\#' -replace '^\s+'
+                            } else {
+                                $nonCommentLine = $true
+                                $exampleLine
+                            }
+                        }) -join [Environment]::NewLine
+                        
+                        # Join all of our markdown lines together                        
+                        $markdownLines -join [Environment]::NewLine
+                        "~~~PowerShell"
+                        $codeBlock
+                        "~~~"
+                    }
+                ) -join [Environment]::NewLine
+                parameters = [Ordered]@{}
+                source = 
+                    if ($this -is [ScriptBlock]) {
+                        $this.Ast.ToString()
+                    } elseif ($this.ScriptBlock) {
+                        "$($this.ScriptBlock.Ast.ToString())"
+                    }
+            }
+
+            foreach ($param in $md.parameters.parameter) {
+                $helpObject.parameters[$param.name] = [Ordered]@{
+                    name = $param.Name
+                    required = $param.required
+                    description = $param.description.text -join [Environment]::NewLine                      
+                    aliases = $param.aliases
+                    position = $param.position
+                    pipeline = $param.pipelineInput                    
+                    type = $param.parameterValue
+                    wildcard = $param.globbing                    
+                }            
+            }
+
+            @(                                
+                "# $($helpObject.title)"
                 
                 if ($md.Synopsis) {
                     "## $($md.Synopsis)"
-                }                
-                $description = $md.Description.text -join [Environment]::NewLine
-                if ($description) {
-                    "### $($description)"
                 }
                 
-                $md.alertset.alert.text -join [Environment]::NewLine
+                if ($helpObject.description) {
+                    "### $($helpObject.description)"
+                    [Environment]::NewLine
+                }
+
+                if ($helpObject.inputs) {
+                    "### Inputs"
+                    [Environment]::NewLine
+                    $helpObject.inputs
+                    [Environment]::NewLine
+                }
+
+                if ($helpObject.outputs) {
+                    "### Outputs"
+                    $helpObject.outputs
+                    [Environment]::NewLine
+                }
+
+                if ($helpObject.notes) {
+                    if (-not ($helpObject.inputs -or $helpObject.outputs)) {
+                        "### Notes"
+                    }
+                    $helpObject.notes
+                    [Environment]::NewLine
+                }                                
                 
-                foreach ($example in $md.examples.example) {
-                    $exampleNumber++
-                    
-                    # Combine the code and remarks
-                    $exampleLines = 
-                        @(
-                            $example.Code
-                            foreach ($remark in $example.Remarks.text) {
-                                if (-not $remark) { continue }
-                                $remark
-                            }
-                        ) -join ([Environment]::NewLine) -split '(?&gt;\r\n|\n)' # and split into lines
+                [Environment]::NewLine  
+                $helpObject.examples
+                [Environment]::NewLine
 
-                    # Anything until the first non-comment line is a markdown predicate to the example
-                    $nonCommentLine = $false
-                    $markdownLines = @()
+                if ($helpObject.parameters.Count) {
+                    "&lt;details&gt;&lt;summary&gt;Parameters&lt;/summary&gt;"
+                    [Environment]::NewLine
 
-                    # Go thru each line in the example as part of a loop
-                    $codeBlock = @(foreach ($exampleLine in $exampleLines) {
-                        # Any comments until the first uncommentedLine are markdown
-                        if ($exampleLine -match '^\#' -and -not $nonCommentLine) {
-                            $markdownLines += $exampleLine -replace '^\#' -replace '^\s+'
-                        } else {
-                            $nonCommentLine = $true
-                            $exampleLine
-                        }
-                    }) -join [Environment]::NewLine
+                    foreach ($parameterName in $helpObject.Parameters.Keys) {
+                        $parameter = $helpObject.Parameters[$parameterName]
+                        "#### $($parameterName)"
+                        [Environment]::NewLine
+                        $parameter.description 
+                        [Environment]::NewLine
+                        $properties = 'required', 'type','position', 
+                            'pipeline',
+                            'wildcard',                            
+                            'aliases'
+                        "|$($properties -join '|')|"
+                        "|$(
+                            (@('-') * ($properties.Count)) -join '|'
+                        )|"
+                        "|$(
+                            $parameter[$properties] -join '|'
+                        )|"
+                        [Environment]::NewLine   
+                    }
                     
-                    # Join all of our markdown lines together                        
-                    $markdownLines -join [Environment]::NewLine
+                    "&lt;/details&gt;"
+                }
+
+                if ($helpObject.source -and 
+                    -not ($helpObject.source -match '(?m)^(?&gt;~~~|```)PowerShell')
+                ) {
+                    "&lt;details&gt;&lt;summary&gt;View Source&lt;/summary&gt;"
+                    [Environment]::NewLine
                     "~~~PowerShell"
-                    $codeBlock
+                    $helpObject.Source
                     "~~~"
+                    "&lt;/details&gt;"
+                    [Environment]::NewLine
                 }
             ) -join [Environment]::NewLine
+
+            $header = $this.Header
+
+            if (-not $header) {
+                $this.Header = $helpObject
+            } elseif ($header -isnot [string]) {
+                foreach ($key in $helpObject.Keys) {
+                    if (-not $header[$key]) {
+                        $header[$key] = $helpObject[$key]
+                    }
+                }
+                $this.Header = $header
+            }
             continue nextInput
         }        
         if ($md -is [ScriptBlock]) {
@@ -147,14 +931,16 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             (Test-Path $md -ErrorAction Ignore)
         )        
     ) {
+        $resolvedPath = $ExecutionContext.SessionState.Path.GetResolvedPSPathFromPSPath($md)
+        $this | Add-Member NoteProperty '#Path' "$resolvedPath" -Force
         $md = Get-Content -Raw $md
     }
 
-    $yamlheader = ''
+    $frontMatter = ''
     if ($md -match '^---') {
-        $null, $yamlheader, $md = $in -split '---', 3
-        if ($yamlheader) {
-            $this | Add-Member NoteProperty '#YamlHeader' $yamlheader -Force
+        $null, $frontMatter, $md = $md -split '---', 3
+        if ($frontMatter) {
+            $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
         }
     }
 
@@ -167,11 +953,14 @@ if ($currentRows) {
 }
 
 $yamlHeaders = @()
-$allMarkdown = @(foreach ($md in $allMarkdown) {
-    if ($md -match '^---') {
-        $null, $yamlheader, $restOfMakdown = $md -split '---', 3
-        if ($yamlheader) {
-            $yamlHeaders+= $yamlheader
+$allMarkdown = @(foreach ($md in $allMarkdown) {    
+    if ($md -match '^[\-\+]{3}') {
+        $null, $frontMatter, $restOfMakdown = $md -split '[\-\+]{3}', 3
+        
+        $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
+
+        if ($frontMatter) {
+            $yamlHeaders+=$frontMatter
         }
         $restOfMakdown
     } else {
@@ -195,12 +984,18 @@ $Markdown = $this.'#Markdown'
 
 if (-not $Markdown) { return }
 
-$mdPipelineBuilder = [Markdig.MarkdownPipelineBuilder]::new()
-$mdPipeline = [Markdig.MarkdownExtensions]::UsePipeTables($mdPipelineBuilder).Build()
+$mdPipelineBuilder = 
+    [Markdig.MarkdownExtensions]::UseYamlFrontMatter(
+        [Markdig.MarkdownExtensions]::UseAdvancedExtensions(
+            [Markdig.MarkdownPipelineBuilder]::new()
+        )
+    )
+
+$mdPipeline = $mdPipelineBuilder.Build()
 
 $this | 
     Add-Member NoteProperty '#HTML' (
-        [Markdig.Markdown]::ToHtml($markdown, $mdPipeline)
+        [Markdig.Markdown]::ToHtml($markdown, $mdPipeline) -replace '\sdisabled="disabled"'
     ) -Force
 
 $this | 
@@ -211,19 +1006,37 @@ $this |
 if (-not $this.'#XML') { return }
 
 $this.psobject.Properties.Remove('#DataSet')
-
+return $this
                     </Script>
       </ScriptMethod>
       <ScriptMethod>
         <Name>ToString</Name>
         <Script>
-                        if ($args) {
+                        &lt;#
+.SYNOPSIS
+    Stringifies MarkX
+.DESCRIPTION
+    Converts MarkX to string output.
+
+    With no parameters, will output Markdown as HTML.
+
+    Any parameters may be names of properties.
+
+    If more than one parameter is provided,
+    all matching values will be joined with a newline.
+#&gt;
+
+if ($args) {
     $anyOutput = foreach ($arg in $args) {
         $thisArg = $this.$arg
         if ($thisArg) {
             if ($thisArg.XHTML.InnerXML) {
                 "$($thisArg.XHTML.InnerXML)" + [Environment]::NewLine
-            } else {
+            } 
+            elseif ($thisArg -is [xml]) {
+                $thisArg.OuterXML
+            }
+            else {
                 "$thisArg"
             }
         }
@@ -233,14 +1046,20 @@ $this.psobject.Properties.Remove('#DataSet')
     }    
 }
 
-if (-not $this.XML.XHTML) { return '' }
-return ("$($this.XML.XHTML.InnerXML)" + [Environment]::NewLine)
+return $this.HTML
                     </Script>
       </ScriptMethod>
       <ScriptMethod>
         <Name>ToTable</Name>
         <Script>
-                        param(
+                        &lt;#
+.SYNOPSIS
+    Converts objects to tables
+.DESCRIPTION
+    Converts objects to markdown tables
+#&gt;
+param(
+# The rows in the table.
 [PSObject[]]
 $Rows
 )
@@ -385,124 +1204,548 @@ return $codeByLanguage
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>ConfigFile</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Config Files
+.DESCRIPTION
+    Gets Configuration Files from a MarkX site.
+.NOTES
+    This should be any file with config in it's name, as long as:
+    
+    * It is preceeded by `\`, `/` or `.`.
+    * It is followed by an extension
+#&gt;
+$this.File -match '[\\/\.]config\.[^\.]+$'
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Content</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Content
+.DESCRIPTION
+    Gets the combined content of the markdown.
+    
+    This contains both the Markdown and the YAML Header.
+#&gt;
+@(    
+    if ($this.FrontMatter) {
+        "---"
+        $this.FrontMatter
+        "---"
+        $this.Markdown
+    } else {
+        $this.Markdown
+    }
+) -join [Environment]::NewLine
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Content
+.DESCRIPTION
+    Sets the combined content of the markdown
+#&gt;
+param($InputObject)
+
+$this | Add-Member NoteProperty '#Input' $InputObject -Force
+
+$this.Sync()
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>DataPath</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets a Markdown Data Path
+.DESCRIPTION
+    Gets a Markdown Data Path.
+
+    This is a `.json` file that may accompany a Markdown file to represent external front matter.
+.NOTES
+    If a Markdown file has a `.Path`, the Data File Path will be it's name, minus the extension, plus `.json`
+.LINK
+    https://www.11ty.dev/docs/data-template-dir/
+#&gt;
+param()
+
+# If there is no path, there is no data 
+if (-not $this.Path) { return}
+
+# If the path is a json file, there is no additional data file path
+if ($this.Path -match '\.json$') { return }
+
+# If the path had no extension, there is no data file path
+if ($this.Path -notmatch '\.[^\.]+$') { return }
+
+# Replace the extension with json, and return it.
+# This is our DataPath
+return $this.Path -replace '\.[^\.]+$', '.json'
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>DataSet</Name>
         <GetScriptBlock>
-                        if ($this.'#DataSet') {return $this.'#DataSet' }
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown DataSets
+.DESCRIPTION
+    Gets Markdown tables as a dataset
+#&gt;
+param()
 
+# If we already have a data set, return it.
+if ($this.'#DataSet') {return $this.'#DataSet' }
+
+# If we could not coerce the markdown into XML,
+# there is no dataset.
+if (-not $this.'#XML') { return  }
+
+# Query all table elements within the markdown
 $tables = $this.'#XML' | Select-Xml //table
+
+# Make a quick little filter to get at the inner text
 filter innerText {
     $in = $_
+    # PowerShell presents inner text in three ways:
+    # 1. As a string property.
     if ($in -is [string]) { "$in" }
+    # 2. As an element with an innerText property.
     elseif ($in.innerText) { "$($in.innerText)" }
+    # 3. As a property bag with a `#text` property.
     elseif ($in.'#text') { "$($in.'#text')" }
 }
 
+# Create another filter to try to upcast things
 function bestType {
-    $allIn = @($input) + @(if ($args) { $args})
-    switch ($true) {        
-        { $allIn -as [float[]] } {
+    # We will do this by taking all of the input as an array
+    # and casting to various strongly typed arrays.        
+    $allIn = @($input) + @(if ($args) { $args})    
+    # In order of preference, that is:
+    switch ($true) {
+        # * `[float]`
+        { $allIn -as [float[]] } {            
             [float]; break
         }
+        # * `[double]`
         { $allIn -as [double[]] } {
             [double]; break
         }
+        # * `[decimal]`
+        { $allIn -as [decimal[]] } {
+            [decimal]; break
+        }
+        # * `[long]`
         { $allIn -as [long[]] } {
             [long]; break
         }
+        # * `[ulong]`
         { $allIn -as [ulong[]] } {
             [uint32]; break
-        }
-        { $allIn -as [decimal[]] } {
-            [decimal]; break
-        }                        
+        }        
+        # * `[timespan]`
         { $allIn -as [timespan[]] } {
             [timespan]; break
-        }                
+        }
+        # * `[DateTime]`
         { $allIn -as [DateTime[]] } {
             [DateTime]; break
-        }
+        }        
         default {
+            # * `[string]`
             [string]
         }
     }            
 }
 
+# Create a new dataset
 $markdownData = [Data.DataSet]::new('MarkX')
+# Keep track of our table number, since tables may not have names.
 $tableNumber = 0
 foreach ($table in $tables) {
     $tableNumber++
     $markdownDataTable  = $markdownData.Tables.Add("MarkdownTable$tableNumber")
     
+    # Get our table headers' inner text.
+    # These are our property names.
     [string[]]$PropertyNames = @( $table.Node.thead.tr.th | innerText )
 
     # We want to upcast our datatable as much as possible
     # so we need to collect the rows first
+
+    # We will put them in a dictionary
     $TableDictionary = [Ordered]@{}
     $propertyIndex = 0
-    foreach ($property in $propertyNames) {        
+    # Walk over each property name
+    foreach ($property in $propertyNames) {
+        # get all values in this column as inner Text
         $TableDictionary[$property] = @(
             foreach ($row in $table.Node.tbody.tr) {
                 @($row.td)[$propertyIndex] | innerText
             }
         )
+        # and move onto the next property.
         $propertyIndex++
     }    
 
     # Now that we have all of the data collected,
-    $markdownDataTable.Columns.AddRange(@(        
-        foreach ($property in $propertyNames) {
+    $markdownDataTable.Columns.AddRange(@(
+        # we can create the data columns
+        foreach ($property in $propertyNames) {            
             $propertyIndex = 0
             $bestType = $TableDictionary[$property] | bestType
             [Data.DataColumn]::new($property, $bestType, '', 'Attribute')
         }
+        # We will always add one more column that contains the table row
+        # Because this cannot always be serialized, we will hide it from the schema.
         [Data.DataColumn]::new('tr', [xml.xmlelement], '', 'Hidden')
     ))
         
+    # Now we need to walk over each row.
     foreach ($row in $table.Node.tbody.tr) {
+        # and get the values as inner text
         $propertyValues = @(            
             $row.td | innerText
             $row
         )
+        # and add them.
+        # PowerShell will cast the values to the appropriate types for the table.
         $null = $markdownDataTable.Rows.Add($propertyValues)
     }
 
+    # Now, for bonus points, check to see if we have a description.
+    # We can get a description from the previous sibling
     $previous = $table.Node.PreviousSibling
+    # If it was a blockquote, that counts.
     if ($previous.LocalName -eq 'blockquote') {
         $markdownDataTable.ExtendedProperties.Add("description", $previous.InnerText)
         $previous = $previous.PreviousSibling
     }
+    # Last but not least, we can derive a table name from a previous header.
     if ($previous.LocalName -match 'h[1-6]') {
         $markdownDataTable.TableName = $previous.InnerText
     }
 }
 
+# Cache our dataset to the object so we do not have to recompute it each tiem.
 $this | Add-Member NoteProperty '#DataSet' $markdownData -Force
 
+# And return the cached dataset.
 return $this.'#DataSet'
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>DataUrl</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown as a Data Url
+.DESCRIPTION
+    Gets the Markdown as a Data Url.
+    
+    This can be used as an image source `&lt;img src&gt;`.
+#&gt;
+$svg = $this.Svg
+"data:image/svg+xml;base64,$(
+    [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$(
+        if ($svg.OuterXml) {
+            $svg.OuterXml
+        } else {
+            $svg
+        })"))
+)"
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Date</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets the Markdown date
+.DESCRIPTION
+    Gets the Markdown date, according to it's YamlHeader `date` field.
+#&gt;
+param()
+
+$header = $this.Header
+
+
+if ($header.date -is [DateTime]) {
+    return $header.date
+} elseif ($header.date -as [DateTime]) {
+    return $header.date -as [DateTime]
+} elseif ($this.Path -match '(?&gt;^|[\\/])\d{4}[-/]\d{2}[-/]\d{2}') {
+    $match = "$($matches.0)"
+    $date = $matches.0 -replace '^[\\/]' -replace '/', '-' -as [DateTime]
+        
+    if ($date) {
+        $this.Date = $date
+        return $date        
+    }    
+}
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets the Markdown date
+.DESCRIPTION
+    Sets the Markdown date in a Yaml Header
+#&gt;
+param(
+[DateTime]
+$Date = [DateTime]::Now
+)
+
+$header = $this.Header
+if (-not $header) { 
+    $this.YamlHeader = [Ordered]@{
+        date = $Date
+    }
+    return
+}
+$header.date = $Date
+$this.Header = $header
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the date in the page.
+    $this.'#Page'.date = $Date
+}
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>File</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Get MarkX files
+.DESCRIPTION
+    Gets the MarkX files.
+    
+    If the MarkX has a `.Path`, it will get files beneath that path.
+    If the MarkX has a `.Site.Root`, it will get files beneath each root.
+.NOTES
+    Will explicitly skip any files in `node-modules`
+#&gt;
+param()
+
+$noise = '[\\/](?&gt;node_modules)'
+
+$enumOptions = [IO.EnumerationOptions]::new()
+$enumOptions.RecurseSubdirectories = $true
+
+$thisPath = $this.Path
+if ($thisPath) {
+    if ([IO.File]::Exists($thisPath)) {
+        return ($thisPath -as [IO.FileInfo])
+    } elseif ([IO.Directory]::Exists($thisPath)) {
+        return @(
+            ($thisPath -as [IO.DirectoryInfo]).EnumerateFiles('*',$enumOptions)
+        ) -notmatch $noise
+    }
+} else {
+    if ($this.Site.root) {        
+        foreach ($rootDirectory in $this.Site.Root) {
+            $rootDirectory = $rootDirectory -as [IO.DirectoryInfo]
+            if ($rootDirectory.EnumerateFiles) {
+                @($rootDirectory.EnumerateFiles('*',$enumOptions)) -notmatch $noise
+            }
+        }
+    }
+}
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>FrontMatter</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Front Matter
+.DESCRIPTION
+    Gets any cached Markdown front matter as a string.
+
+    To get front matter an an object, please use `.Header`
+.LINK
+    MarkX.get_Header
+#&gt;
+[OutputType([string])]
+param()
+return $this.'#FrontMatter'
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Front Matter
+.DESCRIPTION
+    Sets the front matter for a Markdown file.
+
+    This can be a string or object.
+
+    If it is a string, it will set as-is.
+
+    If existing front matter has been set,
+    will attempt to set the front matter in the existing format.
+
+    If no `.FrontMatterType` is detected, will default to json.
+#&gt;
+param($header)
+
+# If the header is a string
+if ($header -is [string]) {
+    # directly set front matter.    
+    $this | Add-Member NoteProperty '#FrontMatter' $header -Force
+    return
+}
+
+switch ("$($this.FrontMatterType)") {
+    # If the header is javascript    
+    javascript {
+        # set the front matter as a string.
+        $this | Add-Member NoteProperty '#FrontMatter' "$header" -Force
+    }
+
+    toml { $this.TomlHeader = $header }
+    yaml { $this.YamlHeader = $header }
+    default { $this.JsonHeader = $header }    
+}
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>FrontMatterType</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Front Matter Type
+.DESCRIPTION
+    Gets the type of Front Matter in a file.
+#&gt;
+
+switch -regex ($this.FrontMatter) {
+    '^[\s\r\n]{0,}(?&gt;\[\w+|.+?=)' {
+        return 'toml'
+    }
+    $this.JavaScriptKeywordPattern {
+        return "javascript"
+    }
+    '(?m)^[\{\[]' {
+        return 'json'
+    }
+    '(?m)^[\w-]+:' {
+        return 'yaml'
+    }
+}
+
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>GitDate</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown date with git
+.DESCRIPTION
+    Gets the Markdown date, according to it's git history.
+.NOTES
+    The date will be the first history entry for the file
+#&gt;
+param()
+
+$thisDate = $this.Date
+if ($thisDate) { return $thisDate }
+
+$gitCommand = $ExecutionContext.SessionState.InvokeCommand.GetCommand('git', 'Application')
+if ($gitCommand) {
+    $gitDates = 
+        @(try {
+            # we can use `git log -n 1 --reverse --format=%ci` to get the first date
+            # (this does not account for file moves, as that is slower)
+            (&amp; $gitCommand -C (
+                "$($this.Path | Split-Path)"
+            ) log -n 1 --reverse --format=%ci --date default $this.Path *&gt;&amp;1) -as [datetime[]]
+        } catch {
+            $null
+        })
+    # Because the file might not be in git, we want to always set the `$LASTEXITCODE` to 0
+    $LASTEXITCODE = 0
+    # Set the date to the last date we find.
+    if ($gitDates) {
+        $this.Date = $gitDates[-1]
+        return $this.header.date
+    }
+}
 
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
         <Name>Header</Name>
         <GetScriptBlock>
-                        if (-not $this.'#YamlHeader') { return }
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown header
+.DESCRIPTION
+    Gets the Markdown front matter header as an object.
 
-$convertFromYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertFrom-Yaml', 'Alias,Cmdlet,Function')
-if (-not $convertFromYaml) {
-    Write-Warning "Cannot get header without ConvertFrom-Yaml"
-    return
+    If the front matter is JavaScript or no front matter type is detected,
+    will output a `[string]`
+
+    If 
+#&gt;
+if (-not $this.'#FrontMatter') { return }
+
+try {
+    switch ($this.FrontMatterType) {
+        yaml {
+            $convertFromYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertFrom-Yaml', 'Alias,Cmdlet,Function')
+            if (-not $convertFromYaml) {
+                throw "Cannot get yaml header without ConvertFrom-Yaml"
+            }
+            return ($this.'#FrontMatter' | &amp; $convertFromYaml)
+        }
+        json {
+            return ($this.'#FrontMatter' | ConvertFrom-Json -AsHashtable)
+        }
+        toml {
+            $convertFromToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertFrom-Toml', 'Alias,Cmdlet,Function')
+            if (-not $convertFromToml) {
+                throw "Cannot get toml header without ConvertFrom-Toml"            
+            }
+
+            return ($this.'#FrontMatter' | &amp; $convertFromToml)
+        }
+        default {
+            return $this.'#FrontMatter'
+        }
+    }
+} catch {
+    $errorRecord = $_
+    return $errorRecord
+    # Write-Warning "Could not get header: $_"
 }
 
-return ($this.'#YamlHeader' | &amp; $convertFromYaml)
                     </GetScriptBlock>
         <SetScriptBlock>
-                        param($header)
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Header
+.DESCRIPTION
+    Sets the Markdown Front Matter from a header object.
 
-$this.YamlHeader = $header
+    This will overwrite any existing front matter.
+#&gt;
+param($header)
+
+$this.FrontMatter = $header
                     </SetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
-        <Name>Headings</Name>
+        <Name>Heading</Name>
         <GetScriptBlock>
                         &lt;#
 .SYNOPSIS
@@ -521,14 +1764,108 @@ $this.XML |
       <ScriptProperty>
         <Name>HTML</Name>
         <GetScriptBlock>
-                        if (-not $this.XML.XHTML) { return '' }
-return ("$($this.XML.XHTML.InnerXML)" + [Environment]::NewLine)
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown as HTML
+.DESCRIPTION
+    Gets Markdown as HTML.
+
+    If the Markdown has no JavaScript, will simply convert the markdown into HTML.
+
+    If the Markdown has JavaScript, will generate a fullscreen page.
+
+    * Any `ImportMap` in the header will be declared as a `&lt;script type='importmap'&gt;`
+    * The `Title` in the front matter will become a `&lt;title&gt;`
+    * Any applicable metadata will be propagated into `&lt;meta&gt;` tags
+    * The markdown will be rendered inline
+    * The JavaScript will become a JavaScript module `&lt;script type='module'&gt;`
+.NOTES
+    If the markdown cannot be coerced into XML, this should use ConvertFrom-Markdown.
+#&gt;
+param()
+
+$jsHeader = $this.JavaScript
+$header = $this.Header
+
+if ($jsHeader) {
+    return @(
+        # If the header had a title
+        if ($header.title) {
+            # propagate it into `&lt;title&gt;`
+            "&lt;title&gt;$($header.title)&lt;/title&gt;"
+        }
+
+        # If the header had a date
+        if ($this.date) {
+            # propagate it into `article:published_time`
+            "&lt;meta property='article:published_time' content='$($this.date.ToString('o'))' /&gt;"
+        }
+
+        # If the header had any opengraph keys
+        foreach ($openGraph in @($header.Keys) -match '[:_]') {
+            # propagate them into `&lt;meta&gt;` elements.
+            "&lt;meta property='$($openGraph -replace '_',':')' content='$(
+                [Web.HttpUtility]::HtmlAttributeEncode(
+                    "$($header.$openGraph)"
+                ))' /&gt;"
+        }
+
+        # Occupy the full screen 
+        "&lt;style&gt;body { max-width: 100vw; height: 100vh; margin: 0}&lt;/style&gt;"
+
+        # If the header provided an import map
+        if ($header.importmap) {
+            # propagate it into `&lt;script type='importmap'&gt;`
+            "&lt;script type='importmap'&gt;$(
+                $header.importmap | ConvertTo-Json -Depth 3
+            )&lt;/script&gt;"
+        }        
+        
+
+        $after = $null
+        
+        $null, $after = $this.Markdown -split $this.StartPattern, 2
+        if ($after) {
+            "&lt;article&gt;"
+                ($after | ConvertFrom-Markdown).Html
+            "&lt;/article&gt;"
+        }
+
+        "&lt;script type='module'&gt;"
+            $jsHeader
+        "&lt;/script&gt;"
+    ) -join [Environment]::NewLine
+}
+
+if (-not $this.XML.XHTML) {
+    if ($this.'#HTML') {
+        return "$($this.'#HTML')" + [Environment]::NewLine
+    }
+    else {
+        return ($this.Markdown |
+            ConvertFrom-Markdown).Html |
+            Select-Object -ExpandProperty Html
+    }
+}
+return @(
+    "&lt;article&gt;"
+    $($this.XML.XHTML.InnerXML)
+    "&lt;/article&gt;"
+) -join [Environment]::NewLine
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
         <Name>Images</Name>
         <GetScriptBlock>
-                        foreach ($aNode in $this.XML | Select-Xml //img) {
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Images
+.DESCRIPTION
+    Gets `&lt;img&gt;` tags found within Markdown after it has been converted to XML
+.NOTES
+    If the Markdown could not be converted to XML, this will return nothing.
+#&gt;
+foreach ($aNode in $this.XML | Select-Xml //img) {
     if ($aNode.Node.src) {
         $aNode.Node
     }
@@ -536,25 +1873,328 @@ return ("$($this.XML.XHTML.InnerXML)" + [Environment]::NewLine)
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>Include</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Get MarkX includes
+.DESCRIPTION
+    Gets MarkX includes as a dictionary.
+    
+    Includes are files within a site beneath a directory matching `_?includes?`
+
+    This will return all of the includes beneath a site as a dictionary of objects.
+#&gt;
+$includes = [Ordered]@{}
+foreach ($file in $this.IncludeFile) {
+
+    $includeName = $file.FullName -replace 
+        '^.+?[\\/]_?includes?[\\/]' -replace 
+            '\.ps1$' -replace 
+                '[\\/]', '/'
+
+    $includes[$includeName] = 
+        if ($file.Extension -eq '.ps1') {
+            # If this does not have a cache, create one now
+            if (-not $this.'#Cache') {
+                $this | Add-Member NoteProperty '#Cache' ([Ordered]@{}) -Force
+            }
+
+            # If they have not yet been cached,
+            if (-not $this.'#Cache'[$file.FullName]) {
+                # cache them.
+                $this.'#Cache'[$file.FullName] = markx (
+                    $ExecutionContext.SessionState.InvokeCommand.GetCommand($file.Fullname, 'ExternalScript')
+                )
+                if ($this.'#site') {
+                    $this.'#Cache'[$file.FullName].Site = $this.Site
+                }                
+            }
+            $this.'#Cache'[$file.FullName]       
+        } else {
+            $file
+        }
+}
+return $includes
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>IncludeFile</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Include Files
+.DESCRIPTION
+    Gets Include Files from a MarkX site.
+.NOTES
+    This should be any file within a directory called `_include` or `_includes`:        
+#&gt;
+$this.File -match '[\\/]_includes?[\\/]'
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>InnerText</Name>
         <GetScriptBlock>
-                        $this.XML.XHTML.InnerText
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Inner Text
+.DESCRIPTION
+    Gets the Inner Text from Markdown.
+
+    This will be the Inner Text of the Markdown, after it is converted to XML.
+.NOTES
+    If the Markdown could not be converted into XML, this will return nothing.
+#&gt;
+$this.XML.XHTML.InnerText
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
         <Name>Input</Name>
         <GetScriptBlock>
-                        return $this.'#input'
+                        &lt;#
+.SYNOPSIS
+    Gets MarkX input
+.DESCRIPTION
+    Gets the input objects for a MarkX object.
+#&gt;
+return $this.'#input'
                     </GetScriptBlock>
         <SetScriptBlock>
-                        param(
+                        &lt;#
+.SYNOPSIS
+    Sets MarkX Input
+.DESCRIPTION
+    Sets the input for a MarkX file or site.
+
+    This will attempt to convert the input to Markdown, 
+    and then will `.Sync()` the object.
+#&gt;
+param(
+# One or more input objects
 [PSObject[]]$InputObject
 )
 
+# Set the `#Input` property
 $this | Add-Member NoteProperty '#Input' $InputObject -Force
 
+# and then Sync.
 $this.Sync()
                     </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>JavaScript</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown JavaScript
+.DESCRIPTION
+    Gets the JavaScript header of a Markdown or mdx file.
+
+    Anything before the first
+    
+    * `# heading`
+    * `&lt;tag&gt;`
+    * or `&lt;&gt;` fragment 
+    
+    will be considered to be javascript, 
+    as long as it has a line beginning with:
+
+    * `import`
+    * `export`
+    * `const`
+    * `let`
+    * `document`
+    * `window`
+#&gt;
+param()
+
+$header = $this.Header
+
+if ($header -is [string] -and $header -match $this.JavaScriptKeywordPattern) {
+    return $header
+}
+elseif ($header.javascript -match $this.JavaScriptKeywordPattern) {
+    return $header.javascript
+}
+else {
+    $before, $after = $this.Markdown -split $this.StartPattern, 2
+    if ($before -match $this.JavaScriptKeywordPattern) {
+        return $before
+    }
+}
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>JavaScriptKeywordPattern</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets JavaScript Keyword Pattern
+.DESCRIPTION
+    Gets a keyword pattern that denotes JavaScript
+
+    Will match any line beginning with optional whitespace followed by one of:
+
+    * `import`
+    * `export`
+    * `const`
+    * `let`
+    * `document`
+    * `window`
+#&gt;
+[Regex]::new('^\s{0,}(?&gt;import|export|const|let|document|window)', 'Multiline,IgnoreCase')
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>JSON</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown JSON
+.DESCRIPTION
+    Gets Markdown as JSON.
+    
+    Uses the [Markpub](https://markpub.at) format.
+#&gt;
+param()
+$this.markpub | ConvertTo-Json -Depth 100
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>JsonHeader</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Json Header
+.DESCRIPTION
+    Gets Markdown Front Matter as JSON.
+
+    If the front matter type is JSON, this will directly return the front matter.
+
+    If the front matter type is not a `[string]`, this will convert the front matter to json.
+#&gt;
+switch ($this.FrontMatterType) {
+    json {
+        return $this.'#FrontMatter'
+    }
+    default {        
+        $header = $this.Header
+        if ($header -is [string] -or $header -is [Management.Automation.ErrorRecord]) {
+            return $header
+        }        
+        return $header | ConvertTo-Json -Depth 100                 
+    }    
+}
+
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Json Header
+.DESCRIPTION
+    Sets the Markdown Front Matter as a JSON header.
+
+    If the value is a `[string]`, will directly set front matter.
+
+    If the value is not a `[string]`, it will be converted to JSON.
+#&gt;
+param($header)
+
+if ($header -is [string]) {
+    $this | Add-Member NoteProperty '#FrontMatter' $header -Force
+    return
+}
+
+$jsonHeader = $header | ConvertTo-Json -Depth 100
+
+$this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
+
+return
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Layout</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Layout
+.DESCRIPTION
+    Gets the layout.
+    
+    If a layout script has been set, this will return that script
+
+    Otherwise, this will return the layout defined in the front matter.
+#&gt;
+param()
+if ($this.'#layout' -is [scriptblock]) { return $this.'#layout' }
+else { return $this.Header.layout }
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Layout
+.DESCRIPTION
+    Sets the layout.  
+    
+    This can either set a PowerShell script has the layout
+    or set the layout in the front matter.
+#&gt;
+param($Layout)
+
+if ($layout -is [string] -and $layout -match '\.ps1$') {
+    $layout = $ExecutionContext.SessionState.InvokeCommand.GetCommand($layout, 'ExternalScript')
+}
+
+if ($layout -is [ScriptBlock]) {
+    $This | Add-Member NoteProperty '#Layout' $Layout -Force
+    return
+}
+elseif (
+    $layout -is [Management.Automation.ExternalScriptInfo] -or
+    $layout -is [Management.Automation.FunctionInfo]
+) {
+    $This | Add-Member NoteProperty '#Layout' $Layout.ScriptBlock -Force
+}
+else {
+    $header = $this.Header
+
+    if (-not $header) {
+        $header = [Ordered]@{layout="$layout"}        
+    } elseif ($header -isnot [string]) {
+        $header.layout = "$layout"
+    } else {
+        throw "Header is a string, cannot set layout"        
+    }
+
+    $this.Header = $header    
+}
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the title in the page.
+    $this.'#Page'.layout = $Layout
+}
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>LayoutFile</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Layout Files
+.DESCRIPTION
+    Gets Layout Files from a site.
+.NOTES
+    This should be any file within a directory called `layout`, or any `layout.ps1`
+
+    The directory can have a preceeding underscore, and can optionally pluralization.        
+#&gt;
+$this.File -match '(?&gt;[\\/]_?layouts?[\\/]|[\\/\._]layout\.ps1$)'
+
+                    </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
         <Name>Lexicon</Name>
@@ -649,9 +2289,21 @@ $markdownData = $this.DataSet
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
-        <Name>Links</Name>
+        <Name>Link</Name>
         <GetScriptBlock>
-                        foreach ($aNode in $this.XML | Select-Xml //a) {
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Links
+.DESCRIPTION
+    Gets anchor links from within Markdown content.
+.NOTES
+    This will return the links nodes after the Markdown is converted to XML.
+    
+    If XML conversion fails, this will not return any values.
+
+    To find hyperlinks within Markdown, use `.FindHyperlink()`
+#&gt;
+foreach ($aNode in $this.XML | Select-Xml //a) {
     if ($aNode.Node.href) {
         $aNode.Node
     }
@@ -665,10 +2317,11 @@ $markdownData = $this.DataSet
 .SYNOPSIS
     Get Liquid
 .DESCRIPTION
-    Get Liquid within the Markdown
+    Get Liquid within the Markdown or Yaml Header
 #&gt;
-if ($this.LiquidPattern -is [regex]) {
-    return $this.LiquidPattern.Matches("$($this.Markdown)")
+if ($this.LiquidPattern -is [regex]) {    
+    $this.LiquidPattern.Matches("$($this.Content)")
+    return 
 }
 
                     </GetScriptBlock>
@@ -700,7 +2353,7 @@ $liquidPattern = @(
         '\{{2}'
         '(?&lt;expression&gt;[^\}]+)'
         '\}{2}'
-    ')'    
+    ')'
 ) -join ''
 
 return [Regex]::new($liquidPattern)
@@ -710,16 +2363,582 @@ return [Regex]::new($liquidPattern)
       <ScriptProperty>
         <Name>Markdown</Name>
         <GetScriptBlock>
-                        return $this.'#Markdown'
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown
+.DESCRIPTION
+    Gets the cached Markdown value for any MarkX object.
+
+    This should be a markdown representation of the object.
+#&gt;
+return $this.'#Markdown'
                     </GetScriptBlock>
         <SetScriptBlock>
-                        param(
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown
+.DESCRIPTION
+    Sets the Markdown on an object.
+.NOTES
+    This will change the `.Input` property, which will then `.Sync()` the markdown.
+#&gt;
+param(
+# Any new or updated markdown content.
 [PSObject[]]$Markdown
 )
 
 $this.Input = $Markdown
 
                     </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>MarkdownContentType</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown content types
+.DESCRIPTION
+    Gets the appropriate Content Type for markdown files, given a number of extensions.
+#&gt;
+[Ordered]@{
+    '.md' = 'text/markdown'
+    '.mdx' = 'text/mdx'
+    '.markdown' = 'text/markdown'
+    # Servers are likely to return this as `application/octet-stream`
+    # but it is a text based content type.
+    '.astro' = 'text/astro' 
+}
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>MarkdownExtension</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown extensions
+.DESCRIPTION
+    Gets the valid extensions for markdown files
+#&gt;
+
+@($this.MarkdownContentType.Keys)
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>MarkdownFile</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Files
+.DESCRIPTION
+    Gets Markdown files.
+    
+    If the MarkX has a `.site.root`,
+    will get all markdown files from that root.
+
+    If the MarkX has a path, will return `$this`
+#&gt;
+param()
+
+# Create an extension for all markdown files.
+$MarkdownFilePattern = "(?&gt;\.$(
+    @($this.MarkdownExtension -replace '\.') -join '|'
+))"
+
+# If this is already a markdown file, return as-is
+if ($this.Path -match $MarkdownFilePattern) { return $this }
+
+# If this does not have a cache, create one now
+if (-not $this.'#Cache') {
+    $this | Add-Member NoteProperty '#Cache' ([Ordered]@{}) -Force
+}
+
+# Why cache?  Because we want to avoid re-parsing files
+# This can be especially useful for large sites.
+$notCached = [Collections.Queue]::new()
+
+# Go over all files in the site
+foreach ($file in $this.File) {
+    # and skip any that are not markdown files.
+    if ($file.Name -notmatch $MarkdownFilePattern) { continue }
+
+    # If they have not yet been cached,
+    if (-not $this.'#Cache'[$file.FullName]) {
+        # cache them.
+        $notCached.Enqueue($file.FullName)
+    } else {
+        $this.'#Cache'[$file.FullName]
+    }  
+}
+
+
+
+foreach ($markx in $notCached.ToArray() | markx) {
+    if ($markx.Path) {
+        if ($this.'#site') {
+            $markx.Site = $this.'#site'
+        }        
+        $this.'#Cache'[$markX.Path] = $markx
+        $this.'#Cache'[$markX.Path]
+    } else {
+        $null = $null
+    }       
+}
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Markpub</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown as `markpub.at`
+.DESCRIPTION
+    Gets Markdown as a `markpub.at` lexicon
+.EXAMPLE
+    (markx "# Hello from MarkX").MarkPub
+.LINK
+    https://markpub.at
+#&gt;
+$markpub = [Ordered]@{
+    '$type' = 'at.markpub.markdown'
+    PSTypeName = 'at.markpub.markdown'    
+}
+
+$header = $this.Header
+
+if ($header -and $Header -isnot [string]) {
+    $markpub.frontMatter = $header
+}
+
+$markpub.text = [Ordered]@{
+    '$type'='at.markpub.text'
+    PSTypeName = 'at.markpub.text'
+}
+
+$markpub.text.markdown = $this.markdown
+
+$markpub.text = [PSCustomObject]$markpub.text
+
+[PSCustomObject]$markpub
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Page</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown as a Page
+.DESCRIPTION
+    Gets Markdown content as a Page dictionary.
+
+    This can contain any data and be used in any way.  
+    
+    It will not be saved to disk.
+.NOTES
+    Some front-matter properties will be synchronized into page data when set.
+
+    
+#&gt;
+if (-not $this.'#Page') {
+    $this |
+        Add-Member NoteProperty '#Page' ([Ordered]@{
+            title = $this.title            
+            content = $this.html
+        }) -Force
+}
+
+if ($this.date) {
+    $this.'#Page'.date = $this.date
+}
+if ($this.tags) {
+    $this.'#Page'.tags = $this.tags
+}
+
+$layout = $this.layout
+
+if ($layout -is [string]) {
+    $this.'#Page'.layout = $layout    
+}
+
+
+$this.'#Page' | 
+    Add-Member NoteProperty MarkX $This -Force
+
+$this.'#Page' | 
+    Add-Member ScriptMethod ToString {
+        $layout = $this.MarkX.Layout
+        if ($layout -is [ScriptBlock]) {
+            $this['Content'] | . $layout
+        } else {
+            $this['Content']
+        }    
+    } -Force 
+
+$this.'#Page'
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Page data
+.DESCRIPTION
+    Sets Markdown Page data.
+    
+    Merges data with existing data and sets properties on the object.
+.NOTES
+    This data is somewhat independent of the front matter.
+
+    It will not be saved, and may be interpreted differently by different engines.
+
+    When it is initialized, various front matter may be replicated into page data.
+
+    When set, settable properties on this object will be changed, 
+    and may propagate into page data.
+#&gt;
+param([Collections.IDictionary]$Page)
+
+$oldPage = $this.Page
+
+foreach ($key in $page.Keys) {
+    # If this was something we could set
+    if ($key -and $this.psobject.Properties[$key].IsSettable) {
+        # set it.
+        $this.$key = $page[$key]
+        # This should propagate any data, but, if it did not
+        if (-not $oldPage[$key]) {
+            # set it in the page.
+            $oldPage[$key] = $page[$key]
+        }
+    } else {
+        # Otherwise, simply set the property on our page.
+        $oldPage[$key] = $page[$key]
+    }
+}
+
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Path</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets a Markdown Path
+.DESCRIPTION
+    Gets the path associated with a Markdown file.
+#&gt;
+if ($this.'#Path') {
+    return $this.'#Path'
+}
+
+if ($this -is [Management.Automation.ExternalScriptInfo]) {
+    return $this.Source
+}
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Set a Markdown Path
+.DESCRIPTION
+    Sets the path associated with a Markdown file.
+#&gt;
+param([string]$Path)
+$this | Add-Member NoteProperty '#Path' $Path -Force
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Requirement</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Requirements
+.DESCRIPTION
+    Gets Requirements for a MarkX file or site.
+
+    If the file is or has a ScriptBlock, any requirements will be returned from the AST.
+
+    If the site is a module, any Require* properties will be returned from the module.
+#&gt;
+
+if ($this -is [ScriptBlock]) {
+    return $this.AST.ScriptRequirements
+}
+
+if ($this.ScriptBlock) {
+    return $this.ScriptBlock.AST.ScriptRequirements
+}
+
+if ($this.ResolvedCommand.ScriptBlock) {
+    return $this.ResolvedCommand.ScriptBlock.AST.ScriptRequirements        
+}
+
+# If this is a module
+if ($this -is [Management.Automation.PSModuleInfo]) {
+    # map any requirements into a dictionary
+    $requirements = [Ordered]@{}    
+    foreach ($prop in $this.psobject.properties) {
+        # any property whose name starts with require is a requirement
+        if ($prop.Name -match 
+            '^Require' -and
+            # except for requirement and it's plural alias
+            # (so we do not infinitely recurse)
+            $prop.Name -notin 'Requirement', 'Requirements'
+        ) {
+            $requirements[$prop.Name] = $prop.Value
+        }
+    }
+    return $requirements
+}
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>ScriptFile</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets MarkX Script Files
+.DESCRIPTION
+    Gets PowerShell Script Files in a MarkX site
+#&gt;
+
+if ($this -is [Management.Automation.ExternalScriptInfo]) {
+    return $this
+}
+
+# If this does not have a cache, create one now
+if (-not $this.'#Cache') {
+    $this | Add-Member NoteProperty '#Cache' ([Ordered]@{}) -Force
+}
+
+# Why cache?  Because we want to avoid re-parsing files
+# This can be especially useful for large sites.
+$notCached = [Collections.Queue]::new()
+
+# Go over all files in the site
+foreach ($file in $this.File -match '\.ps1$') {
+    # and skip any that are not markdown files.
+    # if ($file.Name -notmatch $MarkdownFilePattern) { continue }
+
+    # If they have not yet been cached,
+    if (-not $this.'#Cache'[$file.FullName]) {
+        # cache them.
+        $notCached.Enqueue($file)
+    } else {
+        $this.'#Cache'[$file.FullName]
+    }
+}
+
+foreach ($markx in $notCached.ToArray() | markx) {
+    if ($markx.Path) {
+        if ($this.'#site') {
+            $markx.Site = $this.'#site'
+        }
+        $this.'#Cache'[$markX.Path] = $markx
+        $this.'#Cache'[$markX.Path]
+    } elseif ($markx.Source) {
+        if ($this.'#site') {
+            $markx.Site = $this.'#site'
+        }
+        $this.'#Cache'[$markx.Source] = $markx
+        $this.'#Cache'[$markx.Source]
+    }
+}
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Site</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    MarkX Site information
+.DESCRIPTION
+    Gets a MarkX site.  
+    
+    A site is a collection of documents, instead of a single document.
+#&gt;
+return $this.'#Site'
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets a MarkX site
+.DESCRIPTION
+    Sets site information for a collection of documents.
+.EXAMPLE
+#&gt;
+param(
+&lt;#
+This parameter is untyped.  It may be an array, a string, or a path.
+
+If a string is passed, will set a site root or add an additional site root.
+
+If a dictionary is passed, will set a site dictionary.
+
+If a psobject is passed, will set every property on the object.
+#&gt;
+$Site
+)
+
+
+
+$addSite = @{inputObject=$this;MemberType='NoteProperty';Name='#Site';Force=$true}
+foreach ($siteInfo in $site) {
+    if ($siteInfo -is [Management.Automation.PathInfo]) {
+        $siteInfo = "$siteInfo"
+    }
+    if ($siteInfo -is [string]) {
+        if ([IO.Directory]::Exists($siteInfo)) {
+            if (-not $this.'#Site') {                
+                Add-Member @addSite -Value ([Ordered]@{
+                    root = $siteInfo
+                })
+            } else {
+                # If the site is a new root, make it a list of unique roots.                
+                $this.'#Site'.root = @(
+                    @($this.'#Site'.root) + $siteInfo | Select-Object -Unique
+                )
+            }           
+        }
+    }
+    elseif ($siteInfo -is [Collections.IDictionary]) {
+        if (-not $this.'#Site') {
+            Add-Member @addSite -Value $siteInfo
+        } else {
+            foreach ($key in $siteInfo.Keys) {
+                $this.'#Site'[$key] = $siteInfo[$key]
+            }            
+        }
+    }
+    else {
+        if (-not $this.'#Site') {
+            Add-Member @addSite -Value ([Ordered]@{})            
+        }
+
+        foreach ($prop in $siteInfo.psobject.properties) {
+            $this.'#Site'[$prop.Name] = $siteInfo.($prop.Name)
+        }        
+    }
+}
+
+
+return $this.'#Site'
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>SiteType</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets the Site Type
+.DESCRIPTION
+    Gets the Site or Page Type.
+
+    Will scan any files in the site or page for what technology is being used.
+
+    Multiple site types will most likely be detected.
+#&gt;
+param()
+
+# This list will expand with time
+
+@(switch -regex ($this.File.Name) {
+    '\.css(?&gt;\.|$)' { 'css'}
+    '\.c(?&gt;\.|$)' { 'c' }
+    '\.cpp(?&gt;\.|$)' { 'c++' }
+    '\.rs(?&gt;\.|$)' { 'rust' }
+    '\.go(?&gt;\.|$)' { 'go' }
+    '\.html(?&gt;\.|$)' { 'html '}
+    '\.js(?&gt;\.|$)' { 'javascript' }
+    '\.json(?&gt;\.|$)' { 'json' }
+    '\.jsx(?&gt;\.|$)' { 'jsx'}
+    '\.md(?&gt;\.|$)' { 'markdown'}
+    '\.mdx(?&gt;\.|$)' { 'mdx'}
+    '\.ps[dm]?1$' { 'PowerShell' }
+    '\.pl(?&gt;\.|$)' { 'Perl'}
+    '\.php(?&gt;\.|$)' { 'PHP'}
+    '\.ts(?&gt;\.|$)' { 'typescript' }
+    'Skills?\.md' { 'Skills.md' }
+    'Agents?\.md' { 'Agents.md' }
+    '^hugo\.' { 'hugo' }
+    'astro' { 'astro'}
+    'eleventy' { 'eleventy' }
+    'jekyll' { 'jekyll' }
+    'package\.json' { 'javascript' }
+    'tsconfig' { 'typescript'}
+}) | Select-Object -Unique
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>StartPattern</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Start Pattern
+.DESCRIPTION
+    Gets a Regular Expression that matches the start of Markdown content.
+
+    Anything before this point may be considered JavaScript.
+.NOTES
+    The start pattern will look for the first of any of these tags:
+
+    * Heading 
+    * Tag
+    * Fragment
+    * Code Block
+#&gt;
+param()
+
+$lookingFor = @(
+    '\#{1,6}\s'
+    '\&lt;\w+'
+    '\&lt;\&gt;'
+    '`{3}'
+    '~{3}'
+)
+
+[Regex]::new(
+    "(?=(?&gt;$($lookingFor -join '|')))",
+    'IgnoreCase'
+)
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>SVG</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown SVG
+.DESCRIPTION
+    Gets the Markdown as a SVG image
+.NOTES
+    Since we can embed most HTML into SVG using a `&lt;foreignObject&gt;` element.
+
+    All we need to do to Convert Markdown into SVG is convert it to html 
+    and put it within a `&lt;foreignObject&gt;`.
+#&gt;
+[OutputType([xml],[string])]
+[OutputType("image/svg+xml")]
+param()
+$svg = @(
+    "&lt;svg xmlns='http://www.w3.org/2000/svg'&gt;"
+    "&lt;foreignObject width='100%' height='100%'&gt;"
+    "&lt;xhtml xmlns='http://www.w3.org/1999/xhtml'&gt;"
+    $this.HTML
+    "&lt;/xhtml&gt;"
+    "&lt;/foreignObject&gt;"
+    "&lt;/svg&gt;"
+) -join [Environment]::NewLine
+
+# If this could be cast to xml
+if ($svg -as [xml]) {
+    # return as xml
+    $svg -as [xml]
+} else {
+    # otherwise, return as text.
+    $svg
+}
+                    </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
         <Name>Table</Name>
@@ -736,41 +2955,383 @@ $this.XML |
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
+        <Name>TableOfContents</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Table of Contents
+.DESCRIPTION
+    Gets a Markdown Table of Contents for the current Markdown.
+
+    This will create a series of bullet points linking to each heading level.
+.EXAMPLE
+    $m = markx @(
+        "# h1 "
+        "## h2"
+        "## h2-2" 
+        "### h3" 
+        "##### h5" 
+        "##### h5-2" 
+        "###### h6" 
+        "## h2-2"
+        "# h1-2"
+        "### h3-3"
+        "#### h4"
+        "#### h4-2"
+        "## h2-3"
+    )
+    $m.TableOfContents
+#&gt;
+param()
+
+
+$currentDepth = 0
+$currentHeadingLevel = 1
+$headingDepths = [Ordered]@{"1"=0}
+$headings = @($this.Heading)
+for ($headingIndex = 0; $headingIndex -lt $headings.Length; $headingIndex++) {
+    $heading = $headings[$headingIndex]
+    $headingLevel = ($heading.LocalName -replace 'h') -as [int]
+    if ($headingLevel -gt $currentHeadingLevel) {
+        $currentDepth += 2
+        $currentHeadingLevel = $headingLevel
+        $headingDepths["$headingLevel"] = $currentDepth
+    }
+    elseif ($headingLevel -lt $currentHeadingLevel) {
+        if ($null -ne $headingDepths["$headingLevel"]) {
+            $currentDepth = $headingDepths["$headingLevel"]
+        } else {
+            $currentDepth -= 2
+        }
+        $currentHeadingLevel = $headingLevel        
+    }
+
+    if (-not $currentDepth) {
+        $headingDepths = @{"1"=0}
+    }
+    
+    "$(' ' * $currentDepth)* [$($heading.InnerText)](#$($heading.id))"
+
+}
+foreach ($heading in $this.Heading) {
+    
+}
+
+                    </GetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Tags</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets the Markdown tags
+.DESCRIPTION
+    Gets the Markdown tags, according to it's YamlHeader `tags` field.
+#&gt;
+param()
+
+return $this.Header.tags
+
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets the Markdown tags
+.DESCRIPTION
+    Sets the Markdown tags, according to it's YamlHeader `tags` field.
+#&gt;
+param(
+[string[]]
+$Tags
+)
+
+# Select-Object -Unique to ensure we don't tag twice.
+$Tags = $Tags | Select-Object -Unique
+
+$header = $this.Header
+if (-not $header) { 
+    $this.YamlHeader = [Ordered]@{
+        tags = $Tags
+    }
+    return
+}
+$header.tags = $Tags
+$this.YamlHeader = $header
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the tags in the page.
+    $this.'#Page'.tags = $Tags
+}
+
+
+
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>Title</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets the Markdown title
+.DESCRIPTION
+    Gets the Markdown title.
+
+    If a title is set in the header, this will be the title.
+    
+    Otherwise, will return the first h1 element 
+#&gt;
+param()
+
+$header = $this.Header
+if (-not $header.title) { 
+    if ($this.XML) {
+        return $this.XML | 
+            Select-Xml //h1 |
+                Select-Object -First 1 |  
+                    ForEach-Object {
+                        $_.Node.InnerText
+                    }              
+    } else {
+        return
+    }    
+}
+
+return $header.title
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets the Markdown title
+.DESCRIPTION
+    Sets the Markdown title in a Yaml Header
+#&gt;
+param(
+[string]
+$Title
+)
+
+$header = $this.Header
+if (-not $header) { 
+    $this.YamlHeader = [Ordered]@{
+        title = $Title
+    }
+    return
+}
+$header.title = $Title
+$this.YamlHeader = $header
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the title in the page.
+    $this.'#Page'.title = $Title
+}
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
+        <Name>TomlHeader</Name>
+        <GetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown TOML Header
+.DESCRIPTION
+    Gets Markdown Front Matter as TOML.
+
+    If the front matter is already TOML, will return as-is.
+
+    If the front matter is not TOML and is not a `[string]`, it will be converted to TOML.
+
+    If the front matter is a string, it will be returned directly.    
+
+    If `ConvertTo-Toml` is not loaded, it will return as JSON.    
+#&gt;
+switch ($this.FrontMatterType) {
+    toml {
+        return $this.'#FrontMatter'
+    }
+    default {        
+        $header = $this.Header
+
+        if ($header -is [string] -or $header -is [Management.Automation.ErrorRecord]){
+            return $header
+        }
+
+        $convertToToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Toml', 'Alias,Cmdlet,Function')
+        if (-not $convertToToml) {
+            Write-Warning "ConvertTo-Toml not found, getting header as json"
+            $header | ConvertTo-Json -Depth 100
+            return
+        }
+
+        $convertParameters = @{}
+        return $(try {
+            if ($convertToToml -and $convertToToml.Parameters['Depth']) {
+                $convertParameters['Depth'] = $FormatEnumerationLimit
+            }
+        } catch {
+            Write-Verbose "Could not set depth:  Please use YaYaml: $_"    
+        }
+        finally {
+            $header | &amp; $convertToToml @convertParameters            
+        })                    
+    }    
+}
+return
+                    </GetScriptBlock>
+        <SetScriptBlock>
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Toml Header
+.DESCRIPTION
+    Sets the Markdown Front Matter as a Toml header.
+
+    If the value is a `[string]`, will directly set front matter.
+    
+    If the value is not a `[string]`, it will be converted to Toml.
+
+    If `ConvertTo-Toml` is not installed, will `ConvertTo-Json`.
+#&gt;
+param($header)
+
+if ($header -is [string]) {
+    $this | Add-Member NoteProperty '#FrontMatter' $header -Force
+    return
+}
+
+$convertToToml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Toml', 'Alias,Cmdlet,Function')
+if (-not $convertToToml) {
+    Write-Warning "ConvertTo-Toml not found, setting header as json"
+    $jsonHeader = $header | ConvertTo-Json -Depth 100    
+    $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
+    return
+}
+
+$convertParameters = @{}
+try {
+    if ($convertToToml -and $convertToToml.Parameters['Depth']) {
+        $convertParameters['Depth'] = $FormatEnumerationLimit
+    }
+} catch {
+    Write-Verbose "Could not set depth:  Please use YaYaml: $_"    
+}
+finally {
+    $toToml = $header | &amp; $convertToToml @convertParameters
+    if ($toToml -is [string]) {
+        $this | Add-Member NoteProperty '#FrontMatter' $toToml -Force
+    }
+}
+                    </SetScriptBlock>
+      </ScriptProperty>
+      <ScriptProperty>
         <Name>XML</Name>
         <GetScriptBlock>
-                        return $this.'#XMl'
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown as XML
+.DESCRIPTION
+    Gets the Markdown as XHTML, if possible.
+#&gt;
+return $this.'#XML'
                     </GetScriptBlock>
       </ScriptProperty>
       <ScriptProperty>
         <Name>YamlHeader</Name>
         <GetScriptBlock>
-                        return $this.'#YamlHeader'
+                        &lt;#
+.SYNOPSIS
+    Gets Markdown Yaml Header
+.DESCRIPTION
+    Gets Markdown front matter as a Yaml Header
+
+    If the front matter is already Yaml, will return as-is.
+
+    If the front matter is `[string]`, will return as-is.
+
+    Otherwise, will attempt to `ConvertFrom-Yaml`.
+
+    If `ConvertTo-Yaml` is not installed, will `ConvertTo-Json` instead.
+#&gt;
+switch ($this.FrontMatterType) {
+    yaml {
+        return $this.'#FrontMatter'
+    }
+    default {
+        $header = $this.Header
+        if ($header -is [string] -or $header -is [Management.Automation.ErrorRecord]){
+            return $header
+        }
+        
+        $convertToYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Yaml', 'Alias,Cmdlet,Function')
+        if (-not $convertToYaml) {
+            Write-Warning "ConvertTo-Yaml not found, returning header as json"
+            $header | ConvertTo-Json -Depth 100 
+            return
+        }
+
+        $convertParameters = @{}
+        return try {
+            if ($convertToYaml -and $convertToYaml.Parameters['Depth']) {
+                $convertParameters['Depth'] = $FormatEnumerationLimit
+            }
+        } catch {
+            Write-Verbose "Could not set depth:  Please use YaYaml: $_"    
+        }
+        finally {
+            try {
+                $header | &amp; $convertToYaml @convertParameters
+                if ($toYaml -is [string]) {
+                    $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
+                }
+            } catch {
+                Write-Warning "Conversion failed: $_"
+            }                        
+        }        
+    }    
+}
+return
                     </GetScriptBlock>
         <SetScriptBlock>
-                        param($header)
+                        &lt;#
+.SYNOPSIS
+    Sets Markdown Yaml Header
+.DESCRIPTION
+    Sets the Markdown Front Matter as a Yaml header.
+
+    If the value is a `[string]`, will directly set front matter.
+    
+    If the value is not a `[string]`, it will be converted to Yaml.
+
+    If `ConvertTo-Yaml` is not installed, will `ConvertTo-Json`.
+#&gt;
+param($header)
 
 if ($header -is [string]) {
-    $this | Add-Member NoteProperty '#YamlHeader' $header -Force
+    $this | Add-Member NoteProperty '#FrontMatter' $header -Force
     return
 }
 
 $convertToYaml = $ExecutionContext.SessionState.InvokeCommand.GetCommand('ConvertTo-Yaml', 'Alias,Cmdlet,Function')
 if (-not $convertToYaml) {
-    Write-Warning "Cannot set yaml header without converter"
+    Write-Warning "ConvertTo-Yaml not found, setting header as json"
+    $jsonHeader = $header | ConvertTo-Json -Depth 100     
+    $this | Add-Member NoteProperty '#FrontMatter' $jsonHeader -Force
     return
 }
 
 $convertParameters = @{}
-if ($convertToYaml.Parameters['Depth']) {
-    $convertParameters['Depth'] = $FormatEnumerationLimit
+try {
+    if ($convertToYaml -and $convertToYaml.Parameters['Depth']) {
+        $convertParameters['Depth'] = $FormatEnumerationLimit
+    }
+} catch {
+    Write-Verbose "Could not set depth:  Please use YaYaml: $_"    
 }
-$toYaml = $header | &amp; $convertToYaml @convertParameters
-if ($toYaml -is [string]) {
-    $this | Add-Member NoteProperty '#YamlHeader' $toYaml -Force
+finally {
+    $toYaml = $header | &amp; $convertToYaml @convertParameters
+    if ($toYaml -is [string]) {
+        $this | Add-Member NoteProperty '#FrontMatter' $toYaml -Force
+    }
 }
-
-
-
                     </SetScriptBlock>
       </ScriptProperty>
       <NoteProperty>

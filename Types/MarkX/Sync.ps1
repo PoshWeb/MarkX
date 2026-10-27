@@ -1,14 +1,86 @@
+<#
+.SYNOPSIS
+    Synchronizes Mark Data
+.DESCRIPTION
+    Synchronizes a MarkX input into a parsed MarkX file.
+.NOTES
+    This will read markdown from files, convert them from markdown,
+    and attempt to cast the output to XHTML so it can be queried.    
+#>
 $currentRows = @()
+
+$allInput = @($input)
+if ($allInput -and -not $this) {
+    $this = [PSCustomObject]@{PSTypeName='MarkX'}
+    $this | Add-Member NoteProperty '#Input' $allInput -Force
+}
+
+$markXProtoType = [PSCustomObject]@{PSTypeName='MarkX'}
 
 $allMarkdown = @(:nextInput foreach ($md in $this.Input) {    
     if ($md -isnot [string]) {
+        if ($md -is [PSModuleInfo]) {
+            # Since we have already decorated this type,
+            # we need to get the underlying module path with reflection
+            $modulePath = $md.GetType().GetProperty("Path").GetValue($md)                        
+            if (-not $this.Header) {
+                $this.Header = [Ordered]@{
+                    title = $md.name
+                    description = $md.description
+                    author = $md.author
+                    copyright = $md.copyright
+                    companyName = $md.companyName
+                    version = $md.version
+                    guid = $md.guid
+                    licenseUri = $md.licenseUri
+                    releaseNotes = $md.releaseNotes
+                    projectUri = $md.projectUri
+                    privateData = $md.privateData
+                }
+            }
+                        
+            @(                    
+                "# $($md.name) @ $($md.version)"
+                [Environment]::newline
+                "## $($md.description)"
+
+                if ($md.privateData.PSData.PSIntro) {
+                    [Environment]::newline
+                    $md.PrivateData.PSData.PSIntro
+                }
+                elseif ($md.privateData.PSIntro) {
+                    [Environment]::newline
+                    $md.PrivateData.PSIntro
+                }                
+            )
+
+            $md = ($modulePath | Split-Path) -as [IO.DirectoryInfo]
+        }
+
+        if ($md -is [IO.DirectoryInfo]) {
+            $this |
+                Add-Member NoteProperty '#Path' $md.Fullname -Force
+            $this.Site = "$($md.FullName)"
+            $this.Site.includes = $this.Include
+            continue nextInput
+        }
+        
         # If the markdown was a file
         if ($md -is [IO.FileInfo] -and 
-            # and it had the extension .md or markdown
-            $md.Extension -in '.md', '.markdown') {
-            $md = Get-Content -LiteralPath $md.Fullname -Raw 
+            # and it had a markdown extension
+            $md.Extension -in $markXProtoType.MarkdownExtension) {
+
+            $this |
+                Add-Member NoteProperty '#Path' $md.Fullname -Force
+
+            $md = Get-Content -LiteralPath $md.Fullname -Raw
             $md
             continue
+        }
+
+        if ($md -is [ScriptBlock]) {
+            ${function:Lambda λ} = $md
+            $md = $ExecutionContext.SessionState.InvokeCommand.GetCommand('Lambda λ', 'Function')
         }
         
         if ($md -is [Management.Automation.CommandInfo]) {
@@ -18,68 +90,196 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             ) {
                 Get-Help -Name $md.Name
             } elseif ($md -is [Management.Automation.ExternalScriptInfo]) {
+                $this | Add-Member NoteProperty '#Path' "$($md.Source)" -Force
                 Get-Help -Name $md.Source
             } else {
                 continue nextInput
+            }                        
+
+            $thisScriptBlock = 
+                if ($this -is [ScriptBlock]) {
+                    $this
+                } elseif ($this.ScriptBlock) {
+                    $this.ScriptBlock
+                }
+
+            if ($thisScriptBlock) {    
+                $frontMatter = @(foreach ($attr in $thisScriptBlock.Attributes) {
+                    if ($attr -is [Reflection.AssemblyMetaDataAttribute] -and
+                        $attr.Key -match 'Front[\s\p{P}]{0,}Matter') {
+                        $attr.Value
+                    }   
+                })
+                if ($frontMatter) {
+                    $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
+                }
             }
+
             if ($cmdHelp) {
-                $md = $cmdHelp                
+                $md = $cmdHelp
             }
         }
 
         if ($md.pstypenames -match 'HelpInfo') {
-            @(
-                if ($md.Name -match '[\\/]') {
-                    "# $(@($md.Name -split '[\\/]')[-1] -replace '\.ps1')"
-                } else {
-                    "# $($md.Name)"
-                }
+            $helpObject = [Ordered]@{
+                title = $(
+                    if ($md.Name -match '[\\/]') {
+                        "$(@($md.Name -split '[\\/]')[-1] -replace '\.ps1')"
+                    } else {
+                        "$($md.Name)"
+                    }
+                )
+                synopsis = $md.synopsis
+                description = $md.Description.text -join [Environment]::NewLine
+                notes = $md.alertset.alert.text -join [Environment]::NewLine
+                inputs = $md.inputTypes.inputType.type.name -join [Environment]::NewLine
+                outputs = $md.returnValues.returnValue.type.name -join [Environment]::NewLine
+                examples = @(
+                    foreach ($example in $md.examples.example) {
+                        $exampleNumber++
+                        # Combine the code and remarks
+                        $exampleLines = 
+                            @(
+                                $example.Code
+                                foreach ($remark in $example.Remarks.text) {
+                                    if (-not $remark) { continue }
+                                    $remark
+                                }
+                            ) -join ([Environment]::NewLine) -split '(?>\r\n|\n)' # and split into lines
+
+                        # Anything until the first non-comment line is a markdown predicate to the example
+                        $nonCommentLine = $false
+                        $markdownLines = @()
+
+                        # Go thru each line in the example as part of a loop
+                        $codeBlock = @(foreach ($exampleLine in $exampleLines) {
+                            # Any comments until the first uncommentedLine are markdown
+                            if ($exampleLine -match '^\#' -and -not $nonCommentLine) {
+                                $markdownLines += $exampleLine -replace '^\#' -replace '^\s+'
+                            } else {
+                                $nonCommentLine = $true
+                                $exampleLine
+                            }
+                        }) -join [Environment]::NewLine
+                        
+                        # Join all of our markdown lines together                        
+                        $markdownLines -join [Environment]::NewLine
+                        "~~~PowerShell"
+                        $codeBlock
+                        "~~~"
+                    }
+                ) -join [Environment]::NewLine
+                parameters = [Ordered]@{}
+                source = 
+                    if ($this -is [ScriptBlock]) {
+                        $this.Ast.ToString()
+                    } elseif ($this.ScriptBlock) {
+                        "$($this.ScriptBlock.Ast.ToString())"
+                    }
+            }
+
+            foreach ($param in $md.parameters.parameter) {
+                $helpObject.parameters[$param.name] = [Ordered]@{
+                    name = $param.Name
+                    required = $param.required
+                    description = $param.description.text -join [Environment]::NewLine                      
+                    aliases = $param.aliases
+                    position = $param.position
+                    pipeline = $param.pipelineInput                    
+                    type = $param.parameterValue
+                    wildcard = $param.globbing                    
+                }            
+            }
+
+            @(                                
+                "# $($helpObject.title)"
                 
                 if ($md.Synopsis) {
                     "## $($md.Synopsis)"
-                }                
-                $description = $md.Description.text -join [Environment]::NewLine
-                if ($description) {
-                    "### $($description)"
                 }
                 
-                $md.alertset.alert.text -join [Environment]::NewLine
+                if ($helpObject.description) {
+                    "### $($helpObject.description)"
+                    [Environment]::NewLine
+                }
+
+                if ($helpObject.inputs) {
+                    "### Inputs"
+                    [Environment]::NewLine
+                    $helpObject.inputs
+                    [Environment]::NewLine
+                }
+
+                if ($helpObject.outputs) {
+                    "### Outputs"
+                    $helpObject.outputs
+                    [Environment]::NewLine
+                }
+
+                if ($helpObject.notes) {
+                    if (-not ($helpObject.inputs -or $helpObject.outputs)) {
+                        "### Notes"
+                    }
+                    $helpObject.notes
+                    [Environment]::NewLine
+                }                                
                 
-                foreach ($example in $md.examples.example) {
-                    $exampleNumber++
-                    
-                    # Combine the code and remarks
-                    $exampleLines = 
-                        @(
-                            $example.Code
-                            foreach ($remark in $example.Remarks.text) {
-                                if (-not $remark) { continue }
-                                $remark
-                            }
-                        ) -join ([Environment]::NewLine) -split '(?>\r\n|\n)' # and split into lines
+                [Environment]::NewLine  
+                $helpObject.examples
+                [Environment]::NewLine
 
-                    # Anything until the first non-comment line is a markdown predicate to the example
-                    $nonCommentLine = $false
-                    $markdownLines = @()
+                if ($helpObject.parameters.Count) {
+                    "<details><summary>Parameters</summary>"
+                    [Environment]::NewLine
 
-                    # Go thru each line in the example as part of a loop
-                    $codeBlock = @(foreach ($exampleLine in $exampleLines) {
-                        # Any comments until the first uncommentedLine are markdown
-                        if ($exampleLine -match '^\#' -and -not $nonCommentLine) {
-                            $markdownLines += $exampleLine -replace '^\#' -replace '^\s+'
-                        } else {
-                            $nonCommentLine = $true
-                            $exampleLine
-                        }
-                    }) -join [Environment]::NewLine
+                    foreach ($parameterName in $helpObject.Parameters.Keys) {
+                        $parameter = $helpObject.Parameters[$parameterName]
+                        "#### $($parameterName)"
+                        [Environment]::NewLine
+                        $parameter.description 
+                        [Environment]::NewLine
+                        $properties = 'required', 'type','position', 
+                            'pipeline',
+                            'wildcard',                            
+                            'aliases'
+                        "|$($properties -join '|')|"
+                        "|$(
+                            (@('-') * ($properties.Count)) -join '|'
+                        )|"
+                        "|$(
+                            $parameter[$properties] -join '|'
+                        )|"
+                        [Environment]::NewLine   
+                    }
                     
-                    # Join all of our markdown lines together                        
-                    $markdownLines -join [Environment]::NewLine
+                    "</details>"
+                }
+
+                if ($helpObject.source -and 
+                    -not ($helpObject.source -match '(?m)^(?>~~~|```)PowerShell')
+                ) {
+                    "<details><summary>View Source</summary>"
+                    [Environment]::NewLine
                     "~~~PowerShell"
-                    $codeBlock
+                    $helpObject.Source
                     "~~~"
+                    "</details>"
+                    [Environment]::NewLine
                 }
             ) -join [Environment]::NewLine
+
+            $header = $this.Header
+
+            if (-not $header) {
+                $this.Header = $helpObject
+            } elseif ($header -isnot [string]) {
+                foreach ($key in $helpObject.Keys) {
+                    if (-not $header[$key]) {
+                        $header[$key] = $helpObject[$key]
+                    }
+                }
+                $this.Header = $header
+            }
             continue nextInput
         }        
         if ($md -is [ScriptBlock]) {
@@ -111,14 +311,16 @@ $allMarkdown = @(:nextInput foreach ($md in $this.Input) {
             (Test-Path $md -ErrorAction Ignore)
         )        
     ) {
+        $resolvedPath = $ExecutionContext.SessionState.Path.GetResolvedPSPathFromPSPath($md)
+        $this | Add-Member NoteProperty '#Path' "$resolvedPath" -Force
         $md = Get-Content -Raw $md
     }
 
-    $yamlheader = ''
+    $frontMatter = ''
     if ($md -match '^---') {
-        $null, $yamlheader, $md = $in -split '---', 3
-        if ($yamlheader) {
-            $this | Add-Member NoteProperty '#YamlHeader' $yamlheader -Force
+        $null, $frontMatter, $md = $md -split '---', 3
+        if ($frontMatter) {
+            $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
         }
     }
 
@@ -131,11 +333,14 @@ if ($currentRows) {
 }
 
 $yamlHeaders = @()
-$allMarkdown = @(foreach ($md in $allMarkdown) {
-    if ($md -match '^---') {
-        $null, $yamlheader, $restOfMakdown = $md -split '---', 3
-        if ($yamlheader) {
-            $yamlHeaders+= $yamlheader
+$allMarkdown = @(foreach ($md in $allMarkdown) {    
+    if ($md -match '^[\-\+]{3}') {
+        $null, $frontMatter, $restOfMakdown = $md -split '[\-\+]{3}', 3
+        
+        $this | Add-Member NoteProperty '#FrontMatter' $frontMatter -Force
+
+        if ($frontMatter) {
+            $yamlHeaders+=$frontMatter
         }
         $restOfMakdown
     } else {
@@ -159,12 +364,18 @@ $Markdown = $this.'#Markdown'
 
 if (-not $Markdown) { return }
 
-$mdPipelineBuilder = [Markdig.MarkdownPipelineBuilder]::new()
-$mdPipeline = [Markdig.MarkdownExtensions]::UsePipeTables($mdPipelineBuilder).Build()
+$mdPipelineBuilder = 
+    [Markdig.MarkdownExtensions]::UseYamlFrontMatter(
+        [Markdig.MarkdownExtensions]::UseAdvancedExtensions(
+            [Markdig.MarkdownPipelineBuilder]::new()
+        )
+    )
+
+$mdPipeline = $mdPipelineBuilder.Build()
 
 $this | 
     Add-Member NoteProperty '#HTML' (
-        [Markdig.Markdown]::ToHtml($markdown, $mdPipeline)
+        [Markdig.Markdown]::ToHtml($markdown, $mdPipeline) -replace '\sdisabled="disabled"'
     ) -Force
 
 $this | 
@@ -175,3 +386,4 @@ $this |
 if (-not $this.'#XML') { return }
 
 $this.psobject.Properties.Remove('#DataSet')
+return $this

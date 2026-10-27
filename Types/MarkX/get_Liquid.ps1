@@ -2,8 +2,9 @@
 .SYNOPSIS
     Get Liquid
 .DESCRIPTION
-    Get Liquid within the Markdown
+    Get Liquid within the Markdown or Yaml Header
 #>
-if ($this.LiquidPattern -is [regex]) {
-    return $this.LiquidPattern.Matches("$($this.Markdown)")
+if ($this.LiquidPattern -is [regex]) {    
+    $this.LiquidPattern.Matches("$($this.Content)")
+    return 
 }

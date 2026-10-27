@@ -1,4 +1,11 @@
+<#
+.SYNOPSIS
+    Converts objects to tables
+.DESCRIPTION
+    Converts objects to markdown tables
+#>
 param(
+# The rows in the table.
 [PSObject[]]
 $Rows
 )

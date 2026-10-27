@@ -1,0 +1,26 @@
+<#
+.SYNOPSIS
+    Sets the Markdown date
+.DESCRIPTION
+    Sets the Markdown date in a Yaml Header
+#>
+param(
+[DateTime]
+$Date = [DateTime]::Now
+)
+
+$header = $this.Header
+if (-not $header) { 
+    $this.YamlHeader = [Ordered]@{
+        date = $Date
+    }
+    return
+}
+$header.date = $Date
+$this.Header = $header
+
+# If page data has been initialized,
+if ($this.'#Page' -is [Collections.IDictionary]) {
+    # update the date in the page.
+    $this.'#Page'.date = $Date
+}

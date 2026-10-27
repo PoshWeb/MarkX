@@ -12,10 +12,10 @@
 RootModule = 'MarkX.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.3'
+ModuleVersion = '0.1.4'
 
 # Supported PSEditions
-# CompatiblePSEditions = @()
+CompatiblePSEditions = @('Core')
 
 # ID used to uniquely identify this module
 GUID = '1d54ba10-9f15-4f1f-bf5b-8b2fff02927b'
@@ -39,10 +39,10 @@ TypesToProcess = @('MarkX.types.ps1xml')
 FormatsToProcess = @('MarkX.format.ps1xml')
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Get-MarkX'
+FunctionsToExport = 'Get-MarkX', 'MarkX'
 
 # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-AliasesToExport = 'MarkX', 'Markdown', 'Get-Markdown'
+AliasesToExport = 'Markdown', 'Get-Markdown'
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
@@ -50,26 +50,62 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @()
+        Tags = @('Markdown', 'MDX', 'Astro', 'Hugo', 'Jekyll')
 
         # A URL to the license for this module.
-        LicenseUri = 'https://github.com/StartAutomating/MarkX/blob/main/LICENSE'
+        LicenseUri = 'https://github.com/PoshWeb/MarkX/blob/main/LICENSE'
 
         # A URL to the main website for this project.
-        ProjectUri = 'https://github.com/StartAutomating/MarkX'
+        ProjectUri = 'https://github.com/PoshWeb/MarkX'
 
         # A URL to an icon representing this module.
         # IconUri = ''
 
         # ReleaseNotes of this module
         ReleaseNotes = @'
-## MarkX 0.1.3:
+## MarkX 0.1.4
 
-* Property Improvement:
-  * Late binding MarkX.DataSet (#44)
-* New Properties:
-  * MarkX.Liquid ( #45 )
-  * MarkX.LiquidPattern ( #46 )
+* MarkX now handles multiple files (#57)
+* MarkX is now an eponym (#55)
+* MarkX now supports MDX (#59)
+* MarkX now supports Astro (#64)
+* Extended Type Improvements
+  * `MarkX.CrossReference` cross references (#80)  
+  * `MarkX.Date` (#58)
+  * `MarkX.Find` finds content in Markdown (#76)  
+  * `MarkX.Replace` replaces content in Markdown (#77)  
+  * `MarkX.FindCodeBlock` finds code blocks (#78)
+  * `MarkX.FindHyperlink` finds hyperlinks in markdown (#47)
+  * `MarkX.FindReference` finds code references (#79)
+  * `MarkX.get_Content` (#53)
+  * `MarkX.get_Content` gets markdown content (front matter + markdown) (#53)
+  * `MarkX.get_DataPath` gets the path to external front matter (#84)
+  * `MarkX.get_DataUrl` gets markdown embedded in a data url (#74)
+  * `MarkX.get_JavaScript` (#61)  
+  * `MarkX.get_JavaScriptKeywordPattern` matches javascript keywords (#70)
+  * `MarkX.get_JSON` gets markdown as [Markpub](https://markpub.at) json (#75)
+  * `MarkX.get_Liquid` now matches content (#54)
+  * `MarkX.get_Markdown ContentType` gets ideal content types (#66)
+  * `MarkX.get_MarkdownExtension` gets markdown extensions (#65)
+  * `MarkX.get_Markpub` (#49)
+  * `MarkX.get_Path` gets markdown path (#51)
+  * `MarkX.get_StartPattern` matches the first heading, element, or block (#68)
+  * `MarkX.get_SVG` gets markdown embedded in an SVG (#73)
+  * `MarkX.get/set_FrontMatter` gets/sets Markdown front matter (#63)
+  * `MarkX.HTML` fault tolerance (#52)
+  * `MarkX.HTML` javascript support (#62)
+  * `MarkX.Layout` gets or sets layout script or layout front matter (#72)
+  * `MarkX.Page` gets markdown as a page (#71)
+  * `MarkX.Save` saves markdown content (#67)
+  * `MarkX.TableOfContents` gets a table of contents (#83)
+  * `MarkX.Tags` (#41)
+  * `MarkX.Title` (#60)
+* Fixes:
+  * `MarkX` no longer misses markdown when provided with headers (#50)
+  * `MarkX.set_YamlHeader` tolerates `powershell-yaml` parameter difficulties (#69)
+  * `MarkX` uses MarkDig's Advanced Extensions for better compatibility with `ConvertFrom-Markdown` (#81)
+  * `MarkX` uses plural aliasing (#82)
+* Demo now in `README.md.ps1` (#56)
 
 ---
 
@@ -87,6 +123,7 @@ Additional release notes in [CHANGELOG](https://github.com/StartAutomating/MarkX
 
     } # End of PSData hashtable
 
+    Recommends = 'YaYaml'
 } # End of PrivateData hashtable
 
 # HelpInfo URI of this module
