@@ -2,7 +2,10 @@
 .SYNOPSIS
     Converts objects to tables
 .DESCRIPTION
-    Converts objects to markdown tables
+    Converts objects to markdown tables.
+
+    The columns are every key or property found in any row, in the order they are first seen.
+    Each row is written in column order, with an empty cell wherever a row has no value for a column.
 #>
 param(
 # The rows in the table.
@@ -15,71 +18,47 @@ $allRows = @($allInput) + $(if ($Rows) {
     $rows
 })
 
-$MarkdownLines = @()
-$IsFirst = $true
-foreach ($in in $Rows) {
-    $propertyList = @(
-        # we first need to get a list of properties.
-        if ($in -is [Collections.IDictionary]) 
-        {
-            foreach ($k in $in.Keys) { # take all keys from the dictionary                
-                $k
-            }                        
-        }
-        # Otherwise, walk over all properties on the object
-        else {
-            foreach ($psProp in $In.psobject.properties) {                                                
-                $psProp                        
+# Normalize each row into a dictionary of column name to value,
+# collecting the column names in the order they are first seen.
+$columnNames = [Collections.Generic.List[string]]::new()
+$normalizedRows = @(
+    foreach ($row in $Rows) {
+        $values = [Ordered]@{}
+        if ($row -is [Collections.IDictionary]) {
+            # take all keys from the dictionary
+            foreach ($key in $row.Keys) {
+                $values["$key"] = $row[$key]
+            }
+        } else {
+            # Otherwise, walk over all properties on the object
+            foreach ($psProp in $row.psobject.properties) {
+                $values[$psProp.Name] = $psProp.Value
             }
         }
-    )
-
-    # If we're rendering the first row of a table
-    if ($IsFirst) {
-        # Create the header
-        $markdownLines +=
-            '|' + (@(foreach ($prop in $propertyList) {
-                if ($prop -is [string]) {
-                    $prop
-                } else {
-                    $prop.Name
-                }
-            }) -replace ([Environment]::newline), '<br/>' -replace '\|', '\|' -join '|') + '|'
-        # Then create the alignment row.
-        $markdownLines +=
-            '|' + $(
-                $columnNumber =0 
-                @(
-                    foreach ($prop in $propertyList) {
-                        $colLength = 
-                            if ($prop -is [string]) {
-                                $prop.Length
-                            } else {
-                                $prop.Name.Length
-                            }
-                        
-                        "-" * $colLength
-                        
-                        
-                        $columnNumber++
-                    }
-                ) -replace ([Environment]::newline), '<br/>' -replace '\|', '\|' -join '|') + '|'                    
-        $IsFirst = $false
+        foreach ($columnName in $values.Keys) {
+            if (-not $columnNames.Contains($columnName)) {
+                $columnNames.Add($columnName)
+            }
+        }
+        $values
     }
-    
-    # Now we create the row for this object.
+)
 
-    $markdownLine = '|' + (
-        @(
-            foreach ($prop in $propertyList) {
-                if ($prop -is [string]) {
-                    $in.$prop
-                } else {
-                    $prop.Value 
-                }
+# Each line of the table is output as it is built, so the lines collect without appending to an array.
+$markdownLines = @(
+    if ($normalizedRows.Count) {
+        # Create the header
+        '|' + (@($columnNames) -replace ([Environment]::newline), '<br/>' -replace '\|', '\|' -join '|') + '|'
+        # Then create the alignment row.
+        '|' + (@(foreach ($columnName in $columnNames) { '-' * $columnName.Length }) -join '|') + '|'
+        # Now create the row for each object, in column order.
+        foreach ($values in $normalizedRows) {
+            # one cell per column, empty when the row has no such column
+            $cells = foreach ($columnName in $columnNames) {
+                if ($values.Contains($columnName)) { "$($values[$columnName])" } else { '' }
             }
-        ) -replace ([Environment]::newline), '<br/>' -replace '\|', '\|' -join '|') + '|'
-
-    $markdownLines += $markdownLine
-}
+            '|' + (@($cells) -replace ([Environment]::newline), '<br/>' -replace '\|', '\|' -join '|') + '|'
+        }
+    }
+)
 $markdownLines
